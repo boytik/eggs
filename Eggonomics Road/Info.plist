@@ -7,5 +7,19 @@
 		<string>Digitalt.otf</string>
 		<string>BlackHanSans-Regular.ttf</string>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Camera access is used for enhanced in-app experiences and secure verification.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This app uses tracking to provide personalized ads and improve user experience.</string>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
+	<key>UIStatusBarHidden</key>
+	<true/>
+	<key>UIViewControllerBasedStatusBarAppearance</key>
+	<false/>
 </dict>
 </plist>
