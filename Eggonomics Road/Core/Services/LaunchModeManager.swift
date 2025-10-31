@@ -11,6 +11,7 @@ final class LaunchModeManager {
     private let urlKey = "savedWebURL"
     private let modeKey = "launchMode"
     private let expiresKey = "webURLExpires"
+    private let noMoreConfigRequestsKey = "noMoreConfigRequests"
 
     var currentMode: Mode {
         get { Mode(rawValue: ud.string(forKey: modeKey) ?? "") ?? .undefined }
@@ -33,10 +34,21 @@ final class LaunchModeManager {
         return now.timeIntervalSince1970 >= exp
     }
 
+    var shouldSkipConfigRequests: Bool {
+        get { ud.bool(forKey: noMoreConfigRequestsKey) }
+        set { ud.set(newValue, forKey: noMoreConfigRequestsKey) }
+    }
+    
+    func markNoMoreConfigRequests() {
+        shouldSkipConfigRequests = true
+        print("🚫 [Mode] Marked to skip config requests permanently")
+    }
+
     func resetMode() {
         ud.removeObject(forKey: modeKey)
         ud.removeObject(forKey: urlKey)
         ud.removeObject(forKey: expiresKey)
+        ud.removeObject(forKey: noMoreConfigRequestsKey)
         print("🧹 [Mode] Reset")
     }
 }

@@ -86,6 +86,13 @@ final class RootContainerViewController: UIViewController {
 
     // MARK: Flow
     func startFlow(forceFirstLaunch: Bool = false) async {
+        // Проверяем флаг "больше не делать запросы к конфигу"
+        if modeManager.shouldSkipConfigRequests {
+            print("🚫 Skipping config requests permanently - showing fan mode")
+            showFan()
+            return
+        }
+        
         if !forceFirstLaunch, modeManager.currentMode != .undefined {
             // Subsequent launches
             switch modeManager.currentMode {
@@ -138,7 +145,17 @@ final class RootContainerViewController: UIViewController {
             }
         } catch {
             print("❌ First launch config error: \(error)")
-            showNoInternet()
+            // По требованиям: если первый запрос неуспешен и нет сохраненного URL,
+            // запустить игру и больше не делать запросов к конфигу
+            if modeManager.cachedURL == nil {
+                print("🎮 No cached URL - switching to fan mode permanently")
+                modeManager.currentMode = .fan
+                modeManager.markNoMoreConfigRequests()
+                showFan()
+            } else {
+                // Если есть кешированный URL, используем его
+                showWeb(url: modeManager.cachedURL!)
+            }
         }
     }
 
