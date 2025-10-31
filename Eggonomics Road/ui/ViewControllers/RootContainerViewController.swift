@@ -10,8 +10,18 @@ final class RootContainerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
+        
+        // Сразу показываем загрузочный экран
+        showInitialLoading()
+        
         Task { await startFlow() }
         NotificationCenter.default.addObserver(self, selector: #selector(openURLFromPush(_:)), name: .openURLInsideApp, object: nil)
+    }
+    
+    private func showInitialLoading() {
+        let loadingVC = ChickLoading()
+        let navController = UINavigationController(rootViewController: loadingVC)
+        transition(to: navController)
     }
 
     @objc private func openURLFromPush(_ note: Notification) {
@@ -58,16 +68,27 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func showFan() {
-        // Instead of showing generic Fantic, show existing ChickLoading flow
-        let vc = ChickLoading()
-        let navController = UINavigationController(rootViewController: vc)
-        transition(to: navController)
+        // Если уже показан загрузочный экран, переходим к основному приложению
+        if let navController = current as? UINavigationController,
+           navController.topViewController is ChickLoading {
+            // Заменяем ChickLoading на ChickTabBar (основное приложение)
+            let tabBarVC = ChickTabBar()
+            navController.setViewControllers([tabBarVC], animated: true)
+            print("🎮 [UI] Transitioned from loading to main app")
+        } else {
+            // Если по какой-то причине загрузочного экрана нет, создаем новый
+            let vc = ChickLoading()
+            let navController = UINavigationController(rootViewController: vc)
+            transition(to: navController)
+            print("🎮 [UI] Created new loading screen for fan mode")
+        }
     }
 
     private func showWeb(url: URL) {
         let web = WebContainerViewController(initialURL: url)
         transition(to: web)
         maybeAskPushPermission()
+        print("🌐 [UI] Transitioned from loading to web view: \(url)")
     }
 
     private func maybeAskPushPermission() {
@@ -86,6 +107,13 @@ final class RootContainerViewController: UIViewController {
 
     // MARK: Flow
     func startFlow(forceFirstLaunch: Bool = false) async {
+        print("🚀 [UI] Starting flow, forceFirstLaunch: \(forceFirstLaunch)")
+        
+        // При принудительном первом запуске сбрасываем флаг запретов
+        if forceFirstLaunch {
+            modeManager.resetConfigRequestsFlag()
+        }
+        
         // Проверяем флаг "больше не делать запросы к конфигу"
         if modeManager.shouldSkipConfigRequests {
             print("🚫 Skipping config requests permanently - showing fan mode")
@@ -129,7 +157,10 @@ final class RootContainerViewController: UIViewController {
             let canAskConfig = (afStatus == "non-organic")
             
             if canAskConfig {
+                print("🔍 [DEBUG] AF Status: \(afStatus ?? "nil"), sending config request...")
+                print("🔍 [DEBUG] Merged payload keys: \(merged.keys.sorted())")
                 let resp = try await ConfigClient.shared.fetchConfig(withMergedPayload: merged)
+                print("🔍 [DEBUG] Server response: ok=\(resp.ok), url=\(resp.url ?? "nil"), message=\(resp.message ?? "nil")")
                 if resp.ok, let u = resp.url, let url = URL(string: u) {
                     modeManager.cache(url: u, expires: resp.expires)
                     modeManager.currentMode = .webview

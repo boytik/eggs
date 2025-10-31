@@ -43,6 +43,11 @@ final class LaunchModeManager {
         shouldSkipConfigRequests = true
         print("🚫 [Mode] Marked to skip config requests permanently")
     }
+    
+    func resetConfigRequestsFlag() {
+        shouldSkipConfigRequests = false
+        print("🔄 [Mode] Reset config requests flag - will try again")
+    }
 
     func resetMode() {
         ud.removeObject(forKey: modeKey)

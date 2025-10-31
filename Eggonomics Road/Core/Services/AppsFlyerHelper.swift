@@ -8,7 +8,11 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
     private override init() {}
 
     private let conversionKey = "af_raw_conversion_json"
-    private let deepLinkKey = "af_raw_deeplink_json" // store raw UDL JSON string 
+    private let deepLinkKey = "af_raw_deeplink_json" // store raw UDL JSON string
+    
+    // Механизм ожидания конверсионных данных
+    private var conversionContinuation: CheckedContinuation<[AnyHashable: Any]?, Never>?
+    private var hasReceivedConversionData = false 
 
     func startSDK(appID: String, devKey: String, scene: UIWindowScene?) {
         let af = AppsFlyerLib.shared()
@@ -31,10 +35,20 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         } catch {
             print("❌ [AF] Failed to serialize conversion data: \(error)")
         }
+        
+        // Уведомляем ожидающих о получении данных
+        hasReceivedConversionData = true
+        conversionContinuation?.resume(returning: conversionInfo)
+        conversionContinuation = nil
     }
 
     func onConversionDataFail(_ error: Error) {
         print("❌ [AF] Conversion error: \(error.localizedDescription)")
+        
+        // Уведомляем ожидающих об ошибке (возвращаем nil)
+        hasReceivedConversionData = true
+        conversionContinuation?.resume(returning: nil)
+        conversionContinuation = nil
     }
     
     // MARK: - Deep Link Delegate
@@ -82,9 +96,47 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         else { return nil }
         return obj
     }
+    
+    /// Ожидает получения конверсионных данных от AppsFlyer с таймаутом
+    func waitForConversionData(timeout: TimeInterval = 10.0) async -> [AnyHashable: Any]? {
+        // Если данные уже получены, возвращаем их сразу
+        if hasReceivedConversionData {
+            print("🔄 [AF] Conversion data already available")
+            return rawConversionDict()
+        }
+        
+        print("⏳ [AF] Waiting for conversion data (timeout: \(timeout)s)...")
+        
+        return await withTaskGroup(of: [AnyHashable: Any]?.self) { group in
+            // Задача ожидания данных
+            group.addTask {
+                await withCheckedContinuation { continuation in
+                    self.conversionContinuation = continuation
+                }
+            }
+            
+            // Задача таймаута
+            group.addTask {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                print("⏰ [AF] Conversion data timeout reached")
+                return nil
+            }
+            
+            // Возвращаем первый результат
+            for await result in group {
+                group.cancelAll()
+                return result
+            }
+            
+            return nil
+        }
+    }
 
     /// Build merged payload (raw AF + client fields + UDL data). DO NOT mutate AF keys/types/nulls.
     func buildMergedPayload() async -> [String: Any] {
+        // Ожидаем получения конверсионных данных
+        _ = await waitForConversionData()
+        
         // Start with conversion data
         var merged: [String: Any] = rawConversionDict() ?? [:]
         
@@ -101,11 +153,14 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         
         // Additional client fields
         let af_id = AppsFlyerLib.shared().getAppsFlyerUID()
+        print("🔍 [AF] af_id value: '\(af_id ?? "nil")'")
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
         let storeID = "id6754333754"
         let locale = Locale.current.identifier
         let pushToken = try? await Messaging.messaging().token()
         let firebaseProjectID = "8934278530"
+        print("🔍 [AF] bundleID: '\(bundleID)', storeID: '\(storeID)', locale: '\(locale)'")
+        print("🔍 [AF] pushToken: '\(pushToken ?? "nil")', firebaseProjectID: '\(firebaseProjectID)'")
 
         merged["af_id"] = af_id
         merged["bundle_id"] = bundleID
@@ -114,6 +169,11 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         merged["locale"] = locale
         if let pushToken = pushToken { merged["push_token"] = pushToken }
         merged["firebase_project_id"] = firebaseProjectID
+
+        print("🔍 [AF] Final merged payload keys: \(merged.keys.sorted())")
+        if merged["af_status"] as? String == "Non-organic" {
+            print("🔍 [AF] Non-organic install - full payload will be sent to server")
+        }
 
         return merged
     }

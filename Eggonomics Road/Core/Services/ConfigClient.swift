@@ -14,7 +14,7 @@ final class ConfigClient {
     private let endpoint = URL(string: "https://eggonomicsroad.com/config.php")!
 
     func fetchConfig(withMergedPayload payload: [String: Any]) async throws -> ConfigResponse {
-        print("🌐 [Config] Sending config request...")
+        print("🌐 [Config] Sending config request to: \(endpoint)")
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
