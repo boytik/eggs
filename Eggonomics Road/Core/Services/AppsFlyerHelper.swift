@@ -7,7 +7,7 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate {
     static let shared = AppsFlyerHelper()
     private override init() {}
 
-    private let conversionKey = "af_raw_conversion_json" // store raw JSON string
+    private let conversionKey = "af_raw_conversion_json" 
 
     func startSDK(appID: String, devKey: String, scene: UIWindowScene?) {
         let af = AppsFlyerLib.shared()
@@ -51,10 +51,10 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate {
         // Additional client fields
         let af_id = AppsFlyerLib.shared().getAppsFlyerUID()
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
-        let storeID = "id6754333754" // from brief
+        let storeID = "id6754333754"
         let locale = Locale.current.identifier
         let pushToken = try? await Messaging.messaging().token()
-        let firebaseProjectID = "8934278530" // from brief
+        let firebaseProjectID = "8934278530"
 
         merged["af_id"] = af_id
         merged["bundle_id"] = bundleID

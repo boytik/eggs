@@ -127,7 +127,7 @@ final class RootContainerViewController: UIViewController {
             // Enforce rule: only allow webview when Non-organic
             let afStatus = (merged["af_status"] as? String)?.lowercased()
             let canAskConfig = (afStatus == "non-organic")
-
+            
             if canAskConfig {
                 let resp = try await ConfigClient.shared.fetchConfig(withMergedPayload: merged)
                 if resp.ok, let u = resp.url, let url = URL(string: u) {
