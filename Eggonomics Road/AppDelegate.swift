@@ -65,6 +65,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         af.appsFlyerDevKey = appsFlyerDevKey
         af.appleAppID = appsFlyerAppID
         af.delegate = AppsFlyerHelper.shared
+        af.deepLinkDelegate = AppsFlyerHelper.shared // UDL delegate
         af.isDebug = true                 // выключить в проде
         af.minTimeBetweenSessions = 5
         af.waitForATTUserAuthorization(timeoutInterval: 60)
