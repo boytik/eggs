@@ -20,6 +20,7 @@ final class RootContainerViewController: UIViewController {
     
     private func showInitialLoading() {
         let loadingVC = ChickLoading()
+        loadingVC.disableAutoTransition()  // Отключаем автоматический переход
         let navController = UINavigationController(rootViewController: loadingVC)
         transition(to: navController)
     }
@@ -109,6 +110,7 @@ final class RootContainerViewController: UIViewController {
     func startFlow(forceFirstLaunch: Bool = false) async {
         print("🚀 [UI] Starting flow, forceFirstLaunch: \(forceFirstLaunch)")
         
+        
         // При принудительном первом запуске сбрасываем флаг запретов
         if forceFirstLaunch {
             modeManager.resetConfigRequestsFlag()
@@ -155,6 +157,7 @@ final class RootContainerViewController: UIViewController {
             // Enforce rule: only allow webview when Non-organic
             let afStatus = (merged["af_status"] as? String)?.lowercased()
             let canAskConfig = (afStatus == "non-organic")
+            
             
             if canAskConfig {
                 print("🔍 [DEBUG] AF Status: \(afStatus ?? "nil"), sending config request...")

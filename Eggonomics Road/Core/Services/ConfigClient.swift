@@ -24,9 +24,14 @@ final class ConfigClient {
         let (data, resp) = try await URLSession.shared.data(for: request)
         guard let http = resp as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         print("📥 [Config] Status: \(http.statusCode)")
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📥 [Config] Raw response: \(responseString)")
+        }
 
         // Decode even on non-200 (server can return {ok:false})
         let decoded = try JSONDecoder().decode(ConfigResponse.self, from: data)
+        print("📥 [Config] Decoded response: ok=\(decoded.ok), url=\(decoded.url ?? "nil"), message=\(decoded.message ?? "nil")")
         return decoded
     }
 }

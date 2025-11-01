@@ -7,6 +7,7 @@ final class ChickLoading: UIViewController {
     private let progressLabel = UILabel()
     private let progressView = UIProgressView(progressViewStyle: .default)
     private var progressTimer: Timer?
+    private var shouldAutoTransition: Bool = true  // Флаг для автоматического перехода
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -89,6 +90,11 @@ final class ChickLoading: UIViewController {
     }
     
     private func checkOnboardingStatus() {
+        // Если не должны автоматически переходить (используется из RootContainerViewController)
+        guard shouldAutoTransition else {
+            return
+        }
+        
         // Проверяем, проходил ли пользователь onboarding
         let hasSeenOnboarding = UserDefaults.standard.bool(forKey: "hasSeenOnboarding")
         
@@ -99,6 +105,11 @@ final class ChickLoading: UIViewController {
             // Если не проходил, показываем onboarding
             transitionToOnboarding()
         }
+    }
+    
+    // Метод для отключения автоматического перехода
+    func disableAutoTransition() {
+        shouldAutoTransition = false
     }
     
     private func transitionToMenu() {

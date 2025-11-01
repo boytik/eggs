@@ -72,7 +72,7 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate {
     override var prefersStatusBarHidden: Bool {
         return true
     }
-    
+
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
         return .allButUpsideDown // Портрет + альбомные
     }
