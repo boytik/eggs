@@ -29,6 +29,14 @@ final class ChickArticlessQuizzesLevels: UIViewController {
         }
     }
     
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait // Только портрет
+    }
+
+    override var shouldAutorotate: Bool {
+        return false
+    }
+    
     private func updateWorldCount() {
         let worldCount = UserDefaults.standard.integer(forKey: "worldCount")
         print("Current world count: \(worldCount)")

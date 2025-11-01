@@ -28,7 +28,14 @@ final class ChickInfo: UIViewController {
         setupNavigationBar()
         setupUI()
         setupScrollView()
-        createCards()
+    }
+    
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait // Только портрет
+    }
+
+    override var shouldAutorotate: Bool {
+        return false
     }
     
     override func viewWillAppear(_ animated: Bool) {

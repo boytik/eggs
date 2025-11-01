@@ -72,6 +72,14 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate {
     override var prefersStatusBarHidden: Bool {
         return true
     }
+    
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .allButUpsideDown // Портрет + альбомные
+    }
+
+    override var shouldAutorotate: Bool {
+        return true
+    }
 
     func load(url: URL) {
         print("🌍 Loading: \(url.absoluteString)")

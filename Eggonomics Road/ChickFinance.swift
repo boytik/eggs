@@ -36,9 +36,14 @@ final class ChickFinance: UIViewController {
         setupNavigationBar()
         setupUI()
         setupScrollView()
-        setupIncomeExpensesCard()
-        setupTransactionsCard()
-        loadTransactions()
+    }
+    
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait // Только портрет
+    }
+
+    override var shouldAutorotate: Bool {
+        return false
     }
     
     override func viewWillAppear(_ animated: Bool) {

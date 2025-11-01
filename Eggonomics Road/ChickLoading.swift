@@ -19,6 +19,14 @@ final class ChickLoading: UIViewController {
     deinit {
         progressTimer?.invalidate()
     }
+    
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .allButUpsideDown // Портрет + альбомные
+    }
+
+    override var shouldAutorotate: Bool {
+        return true
+    }
 
     private func chickSource() {
         chickLaunch.frame = view.bounds

@@ -29,6 +29,14 @@ final class ChickOnboarding: UIViewController {
         self.navigationController?.setNavigationBarHidden(false, animated: animated)
     }
     
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .portrait // Только портрет
+    }
+
+    override var shouldAutorotate: Bool {
+        return false
+    }
+    
     private func setupUI() {
         view.backgroundColor = .black
         

@@ -114,4 +114,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         AppsFlyerLib.shared().handleOpen(url, options: options)
         return true
     }
+
+    // MARK: - Orientation Support
+    func application(_ application: UIApplication, supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
+        // Получаем текущий контроллер
+        guard let rootVC = window?.rootViewController else {
+            return .portrait
+        }
+        
+        // Проверяем тип контроллера
+        if let _ = rootVC as? WebContainerViewController {
+            return .allButUpsideDown // Портрет + альбомные
+        }
+        
+        // Если это RootContainerViewController, проверяем его дочерние контроллеры
+        if let containerVC = rootVC as? RootContainerViewController {
+            // Проверяем текущий показываемый контроллер
+            if let currentVC = containerVC.children.first {
+                if let _ = currentVC as? WebContainerViewController {
+                    return .allButUpsideDown
+                }
+                if let navController = currentVC as? UINavigationController {
+                    if let topVC = navController.topViewController {
+                        if topVC is ChickLoading {
+                            return .allButUpsideDown
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Для всех остальных контроллеров - только портрет
+        return .portrait
+    }
 }
