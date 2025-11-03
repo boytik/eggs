@@ -104,14 +104,38 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      continue userActivity: NSUserActivity,
                      restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+        print("🔗 [AppDelegate] Universal Link received: \(userActivity.webpageURL?.absoluteString ?? "nil")")
         AppsFlyerLib.shared().continue(userActivity, restorationHandler: nil)
+        
+        // Перезапускаем flow через небольшую задержку, чтобы AppsFlyer обработал данные
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootVC = window.rootViewController as? RootContainerViewController {
+                print("🔄 [AppDelegate] Restarting flow after Universal Link")
+                Task { await rootVC.startFlow(forceFirstLaunch: true) }
+            }
+        }
+        
         return true
     }
 
     func application(_ app: UIApplication,
                      open url: URL,
                      options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        print("🔗 [AppDelegate] URL Scheme received: \(url.absoluteString)")
         AppsFlyerLib.shared().handleOpen(url, options: options)
+        
+        // Перезапускаем flow через небольшую задержку, чтобы AppsFlyer обработал данные
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let rootVC = window.rootViewController as? RootContainerViewController {
+                print("🔄 [AppDelegate] Restarting flow after URL Scheme")
+                Task { await rootVC.startFlow(forceFirstLaunch: true) }
+            }
+        }
+        
         return true
     }
 

@@ -26,6 +26,12 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
 
     func onConversionDataSuccess(_ conversionInfo: [AnyHashable : Any]) {
         print("✅ [AF] Conversion received")
+        
+        // Логируем ключевые параметры
+        let afStatus = conversionInfo["af_status"] as? String ?? "nil"
+        let isFirstLaunch = conversionInfo["is_first_launch"] as? Bool ?? false
+        print("🔍 [AF] af_status: '\(afStatus)', is_first_launch: \(isFirstLaunch)")
+        
         // Keep RAW JSON (no key changes, no null removal)
         do {
             let data = try JSONSerialization.data(withJSONObject: conversionInfo, options: [])
@@ -59,6 +65,15 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         case .found:
             if let deepLinkObj = result.deepLink?.clickEvent {
                 print("✅ [AF] Deep link data found")
+                
+                // Логируем ключевые параметры deep link
+                if let pid = deepLinkObj["pid"] as? String {
+                    print("🔍 [AF] Deep link pid: '\(pid)'")
+                }
+                if let campaign = deepLinkObj["c"] as? String {
+                    print("🔍 [AF] Deep link campaign: '\(campaign)'")
+                }
+                
                 // Keep RAW UDL JSON (no key changes, no null removal)
                 do {
                     let data = try JSONSerialization.data(withJSONObject: deepLinkObj, options: [])
@@ -150,6 +165,13 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                     merged[key] = value
                 }
             }
+            
+            // Если есть deep link данные, принудительно устанавливаем Non-organic
+            if !deepLinkData.isEmpty {
+                let forceMessage = "🔗 Deep link data present - forcing af_status to Non-organic"
+                print(forceMessage)
+                merged["af_status"] = "Non-organic"
+            }
         }
         
         // Additional client fields
@@ -171,9 +193,15 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         if let pushToken = pushToken { merged["push_token"] = pushToken }
         merged["firebase_project_id"] = firebaseProjectID
 
-        print("🔍 [AF] Final merged payload keys: \(merged.keys.sorted())")
-        if merged["af_status"] as? String == "Non-organic" {
+        // Финальная отладочная информация
+        let finalAfStatus = merged["af_status"] as? String ?? "nil"
+        print("🔍 [AF] Final af_status: '\(finalAfStatus)'")
+        print("🔍 [AF] Final merged payload keys: \(Array(merged.keys).map { "\($0)" }.sorted())")
+        
+        if finalAfStatus.lowercased() == "non-organic" {
             print("🔍 [AF] Non-organic install - full payload will be sent to server")
+        } else {
+            print("🔍 [AF] Organic install - fan mode will be used")
         }
 
         return merged
