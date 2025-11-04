@@ -19,7 +19,7 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         af.appsFlyerDevKey = devKey
         af.appleAppID = appID
         af.delegate = self
-        af.isDebug = false
+        af.isDebug = true  // ВРЕМЕННО включен для отладки
         af.start()
         print("🚀 [AF] Started")
     }
@@ -32,11 +32,16 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         let isFirstLaunch = conversionInfo["is_first_launch"] as? Bool ?? false
         print("🔍 [AF] af_status: '\(afStatus)', is_first_launch: \(isFirstLaunch)")
         
+        // Логируем все ключи для отладки
+        let keys = "🔍 All conversion keys: \(Array(conversionInfo.keys).map { "\($0)" }.sorted())"
+        print(keys)
+        
         // Keep RAW JSON (no key changes, no null removal)
         do {
             let data = try JSONSerialization.data(withJSONObject: conversionInfo, options: [])
             if let json = String(data: data, encoding: .utf8) {
                 UserDefaults.standard.set(json, forKey: conversionKey)
+                print("💾 [AF] Conversion data saved to UserDefaults")
             }
         } catch {
             print("❌ [AF] Failed to serialize conversion data: \(error)")
@@ -73,6 +78,10 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                 if let campaign = deepLinkObj["c"] as? String {
                     print("🔍 [AF] Deep link campaign: '\(campaign)'")
                 }
+                
+                // Логируем все ключи deep link для отладки
+                let deepKeys = "🔍 All deep link keys: \(Array(deepLinkObj.keys).map { "\($0)" }.sorted())"
+                print(deepKeys)
                 
                 // Keep RAW UDL JSON (no key changes, no null removal)
                 do {
@@ -166,12 +175,6 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                 }
             }
             
-            // Если есть deep link данные, принудительно устанавливаем Non-organic
-            if !deepLinkData.isEmpty {
-                let forceMessage = "🔗 Deep link data present - forcing af_status to Non-organic"
-                print(forceMessage)
-                merged["af_status"] = "Non-organic"
-            }
         }
         
         // Additional client fields

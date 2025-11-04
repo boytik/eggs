@@ -26,12 +26,25 @@ final class ChickMenu: UIViewController {
         super.viewWillAppear(animated)
         
         setupNavigationBar()
+        
+        // Принудительно обновляем layout при появлении
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         // Обновляем финансовую статистику после того как view полностью загружен
         updateFinancialStats()
+        
+        // Дополнительное обновление layout после полного появления
+        DispatchQueue.main.async {
+            self.view.setNeedsLayout()
+            self.view.layoutIfNeeded()
+            
+            // Обновляем frame фонового изображения на случай изменения ориентации
+            self.backgroundImageView.frame = self.view.bounds
+        }
     }
     
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask {

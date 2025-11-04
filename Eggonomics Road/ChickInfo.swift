@@ -110,6 +110,9 @@ final class ChickInfo: UIViewController {
     private func setupScrollView() {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
+        
+        // Создаем карточки
+        createCards()
     }
     
     private func createCards() {

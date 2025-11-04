@@ -27,6 +27,26 @@ final class ChickTabBar: UITabBarController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         self.navigationController?.setNavigationBarHidden(true, animated: animated)
+        
+        // Принудительно обновляем layout при появлении
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // Дополнительное обновление layout после полного появления
+        DispatchQueue.main.async {
+            self.view.setNeedsLayout()
+            self.view.layoutIfNeeded()
+            
+            // Обновляем layout всех дочерних контроллеров
+            for viewController in self.viewControllers ?? [] {
+                viewController.view.setNeedsLayout()
+                viewController.view.layoutIfNeeded()
+            }
+        }
     }
     
     override func viewWillDisappear(_ animated: Bool) {

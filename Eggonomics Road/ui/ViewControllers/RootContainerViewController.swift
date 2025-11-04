@@ -19,7 +19,7 @@ final class RootContainerViewController: UIViewController {
     }
     
     private func showInitialLoading() {
-        let loadingVC = ChickLoading()
+        let loadingVC = EggLoadingBouncingViewController()
         loadingVC.disableAutoTransition()  // Отключаем автоматический переход
         let navController = UINavigationController(rootViewController: loadingVC)
         transition(to: navController)
@@ -71,14 +71,19 @@ final class RootContainerViewController: UIViewController {
     private func showFan() {
         // Если уже показан загрузочный экран, переходим к основному приложению
         if let navController = current as? UINavigationController,
-           navController.topViewController is ChickLoading {
+           navController.topViewController is EggLoadingBouncingViewController {
             // Заменяем ChickLoading на ChickTabBar (основное приложение)
             let tabBarVC = ChickTabBar()
             navController.setViewControllers([tabBarVC], animated: true)
             print("🎮 [UI] Transitioned from loading to main app")
+            
+            // Принудительно обновляем layout после перехода к игре
+            DispatchQueue.main.async {
+                self.forceLayoutUpdate()
+            }
         } else {
             // Если по какой-то причине загрузочного экрана нет, создаем новый
-            let vc = ChickLoading()
+            let vc = EggLoadingBouncingViewController()
             let navController = UINavigationController(rootViewController: vc)
             transition(to: navController)
             print("🎮 [UI] Created new loading screen for fan mode")
@@ -105,11 +110,37 @@ final class RootContainerViewController: UIViewController {
         )
         present(ask, animated: true)
     }
+    
+    private func forceLayoutUpdate() {
+        print("🔄 [UI] Forcing layout update for orientation change")
+        
+        // Обновляем layout основного view
+        view.setNeedsLayout()
+        view.layoutIfNeeded()
+        
+        // Обновляем layout текущего контроллера
+        if let currentVC = current {
+            currentVC.view.setNeedsLayout()
+            currentVC.view.layoutIfNeeded()
+            
+            // Если это navigation controller, обновляем его содержимое
+            if let navController = currentVC as? UINavigationController {
+                for vc in navController.viewControllers {
+                    vc.view.setNeedsLayout()
+                    vc.view.layoutIfNeeded()
+                }
+            }
+        }
+        
+        // Принудительно обновляем ориентацию
+        if #available(iOS 16.0, *) {
+            view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
+        }
+    }
 
     // MARK: Flow
     func startFlow(forceFirstLaunch: Bool = false) async {
         print("🚀 [UI] Starting flow, forceFirstLaunch: \(forceFirstLaunch)")
-        
         
         // При принудительном первом запуске сбрасываем флаг запретов
         if forceFirstLaunch {
@@ -156,7 +187,12 @@ final class RootContainerViewController: UIViewController {
             let merged = await AppsFlyerHelper.shared.buildMergedPayload()
             // Enforce rule: only allow webview when Non-organic
             let afStatus = (merged["af_status"] as? String)?.lowercased()
+            print("🔍 [DEBUG] Original af_status from merged: '\(afStatus ?? "nil")'")
+            print("🔍 [DEBUG] Full merged payload: \(merged)")
+            
             let canAskConfig = (afStatus == "non-organic")
+            print("🔍 [DEBUG] canAskConfig: \(canAskConfig)")
+            print("🔍 [DEBUG] Logic: af_status '\(afStatus ?? "nil")' == 'non-organic' = \(canAskConfig)")
             
             
             if canAskConfig {
@@ -167,14 +203,20 @@ final class RootContainerViewController: UIViewController {
                 if resp.ok, let u = resp.url, let url = URL(string: u) {
                     modeManager.cache(url: u, expires: resp.expires)
                     modeManager.currentMode = .webview
+                    
+                    
                     showWeb(url: url)
                 } else {
                     modeManager.currentMode = .fan
+                    
+                    
                     showFan()
                 }
             } else {
                 print("ℹ️ AF status not Non-organic → fan mode")
                 modeManager.currentMode = .fan
+                
+                
                 showFan()
             }
         } catch {

@@ -21,6 +21,11 @@
 		3E58A5252EB12ACA00325AF9 /* PushPermissionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E58A51C2EB12ACA00325AF9 /* PushPermissionViewController.swift */; };
 		3E58A5262EB12ACA00325AF9 /* FanticViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E58A51A2EB12ACA00325AF9 /* FanticViewController.swift */; };
 		3E58A5282EB12BB600325AF9 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3E58A5272EB12BB600325AF9 /* GoogleService-Info.plist */; };
+		3EF6E34E2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34B2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift */; };
+		3EF6E34F2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34C2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift */; };
+		3EF6E3502EBA18710000C6D5 /* EggLoadingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */; };
+		3EF6E3512EBA19000000C6D5 /* EggView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E3522EBA19000000C6D5 /* EggView.swift */; };
+		3EF6E3532EBA19000000C6D5 /* CustomProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E3542EBA19000000C6D5 /* CustomProgressView.swift */; };
 		D24C86A02EA766880098D34B /* ChickMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24C869F2EA766850098D34B /* ChickMenu.swift */; };
 		D24C86A22EA766D00098D34B /* BlackHanSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D24C86A12EA766D00098D34B /* BlackHanSans-Regular.ttf */; };
 		D24C86A42EA76CD40098D34B /* ChickTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24C86A32EA76CD00098D34B /* ChickTabBar.swift */; };
@@ -54,6 +59,11 @@
 		3E58A51D2EB12ACA00325AF9 /* RootContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootContainerViewController.swift; sourceTree = "<group>"; };
 		3E58A51E2EB12ACA00325AF9 /* WebContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebContainerViewController.swift; sourceTree = "<group>"; };
 		3E58A5272EB12BB600325AF9 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		3EF6E34B2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingBouncingViewController.swift; sourceTree = "<group>"; };
+		3EF6E34C2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingSpinningViewController.swift; sourceTree = "<group>"; };
+		3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingViewController.swift; sourceTree = "<group>"; };
+		3EF6E3522EBA19000000C6D5 /* EggView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggView.swift; sourceTree = "<group>"; };
+		3EF6E3542EBA19000000C6D5 /* CustomProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomProgressView.swift; sourceTree = "<group>"; };
 		D24C869F2EA766850098D34B /* ChickMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickMenu.swift; sourceTree = "<group>"; };
 		D24C86A12EA766D00098D34B /* BlackHanSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BlackHanSans-Regular.ttf"; sourceTree = "<group>"; };
 		D24C86A32EA76CD00098D34B /* ChickTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickTabBar.swift; sourceTree = "<group>"; };
@@ -123,20 +133,25 @@
 			path = ViewControllers;
 			sourceTree = "<group>";
 		};
-		3E58A5202EB12ACA00325AF9 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
 		3E58A5212EB12ACA00325AF9 /* ui */ = {
 			isa = PBXGroup;
 			children = (
+				3EF6E34A2EBA18650000C6D5 /* Splash */,
 				3E58A51F2EB12ACA00325AF9 /* ViewControllers */,
-				3E58A5202EB12ACA00325AF9 /* Views */,
 			);
 			path = ui;
+			sourceTree = "<group>";
+		};
+		3EF6E34A2EBA18650000C6D5 /* Splash */ = {
+			isa = PBXGroup;
+			children = (
+				3EF6E34B2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift */,
+				3EF6E34C2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift */,
+				3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */,
+				3EF6E3522EBA19000000C6D5 /* EggView.swift */,
+				3EF6E3542EBA19000000C6D5 /* CustomProgressView.swift */,
+			);
+			path = Splash;
 			sourceTree = "<group>";
 		};
 		D2A5F7A92EA63555005694C9 = {
@@ -282,6 +297,11 @@
 				3E58A5162EB12ABA00325AF9 /* LaunchModeManager.swift in Sources */,
 				3E58A5172EB12ABA00325AF9 /* Reachability.swift in Sources */,
 				3E58A5182EB12ABA00325AF9 /* PushPermissionService.swift in Sources */,
+				3EF6E34E2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift in Sources */,
+				3EF6E34F2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift in Sources */,
+				3EF6E3502EBA18710000C6D5 /* EggLoadingViewController.swift in Sources */,
+				3EF6E3512EBA19000000C6D5 /* EggView.swift in Sources */,
+				3EF6E3532EBA19000000C6D5 /* CustomProgressView.swift in Sources */,
 				3E58A5192EB12ABA00325AF9 /* AppsFlyerHelper.swift in Sources */,
 				D2961F002EA67EBF00203986 /* ChickOnboarding.swift in Sources */,
 				D2A5F7DA2EA67780005694C9 /* ChickLoading.swift in Sources */,
@@ -315,7 +335,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Eggonomics Road/Eggonomics Road.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -333,7 +353,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.egg.economics.com;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -354,7 +374,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "Eggonomics Road/Eggonomics Road.entitlements";
 				CODE_SIGN_IDENTITY = "Apple Development";
-				CODE_SIGN_STYLE = Automatic;
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
 				GENERATE_INFOPLIST_FILE = YES;
@@ -372,7 +392,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = app.egg.economics.com;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

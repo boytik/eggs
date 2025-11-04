@@ -48,6 +48,14 @@ final class ChickFinance: UIViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        
+        print("🔧 [Finance] viewWillAppear called")
+        // Инициализируем UI и загружаем данные
+        updateSelectionUI()
+        updateValueDisplay()
+        loadTransactions()
+        print("🔧 [Finance] Initial setup completed")
+        
         // Запускаем анимацию карточек при каждом появлении экрана
         DispatchQueue.main.async {
             self.animateCards()
@@ -130,15 +138,23 @@ final class ChickFinance: UIViewController {
     private func setupScrollView() {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
+        
+        // Создаем карточки
+        print("🔧 [Finance] Setting up cards...")
+        setupIncomeExpensesCard()
+        setupTransactionsCard()
+        print("🔧 [Finance] Cards setup completed")
     }
     
     private func setupIncomeExpensesCard() {
+        print("🔧 [Finance] Setting up income/expenses card...")
         stackView.addArrangedSubview(incomeExpensesCard)
         
-        incomeExpensesCard.backgroundColor = UIColor(named: "cardGray")
+        incomeExpensesCard.backgroundColor = UIColor(named: "cardGray") ?? UIColor.lightGray
+        print("🔧 [Finance] Card background color: \(incomeExpensesCard.backgroundColor?.description ?? "nil")")
         incomeExpensesCard.layer.cornerRadius = 16
         incomeExpensesCard.layer.borderWidth = 4
-        incomeExpensesCard.layer.borderColor = UIColor(named: "borderGray")?.cgColor
+        incomeExpensesCard.layer.borderColor = (UIColor(named: "borderGray") ?? UIColor.gray)?.cgColor
         
         incomeExpensesCard.addSubview(incomeLabel)
         incomeExpensesCard.addSubview(expensesLabel)
@@ -159,13 +175,13 @@ final class ChickFinance: UIViewController {
         
         // Income Label
         incomeLabel.text = "Income"
-        incomeLabel.textColor = UIColor(named: "chickBrown")
+        incomeLabel.textColor = UIColor(named: "chickBrown") ?? UIColor.brown
         incomeLabel.font = UIFont(name: "BlackHanSans-Regular", size: 16) ?? UIFont.systemFont(ofSize: 16, weight: .bold)
         incomeLabel.textAlignment = .left
         
         // Expenses Label
         expensesLabel.text = "Expenses"
-        expensesLabel.textColor = UIColor(named: "chickBrown")?.withAlphaComponent(0.5)
+        expensesLabel.textColor = (UIColor(named: "chickBrown") ?? UIColor.brown).withAlphaComponent(0.5)
         expensesLabel.font = UIFont(name: "BlackHanSans-Regular", size: 16) ?? UIFont.systemFont(ofSize: 16, weight: .bold)
         expensesLabel.textAlignment = .right
         

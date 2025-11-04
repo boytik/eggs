@@ -18,6 +18,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
         print("🚀 App: Starting initialization...")
+        
+        // Проверяем launch options на наличие URL
+        if let url = launchOptions?[.url] as? URL {
+            print("🔗 [AppDelegate] Launched with URL: \(url.absoluteString)")
+        }
+        if let userActivity = launchOptions?[.userActivityDictionary] as? [String: Any] {
+            print("🔗 [AppDelegate] Launched with user activity: \(userActivity)")
+        }
 
         // 1) Firebase + пуши
         setupFirebase(application: application)
@@ -66,7 +74,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         af.appleAppID = appsFlyerAppID
         af.delegate = AppsFlyerHelper.shared
         af.deepLinkDelegate = AppsFlyerHelper.shared // UDL delegate
-        af.isDebug = true                 // выключить в проде
+        af.isDebug = true                 // ВРЕМЕННО включен для отладки
         af.minTimeBetweenSessions = 5
         af.waitForATTUserAuthorization(timeoutInterval: 60)
 
@@ -77,8 +85,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // MARK: - AppsFlyer start (+ ATT)
     func applicationDidBecomeActive(_ application: UIApplication) {
+        print("📱 [AppDelegate] App became active")
         if #available(iOS 14, *) {
-            ATTrackingManager.requestTrackingAuthorization { _ in
+            ATTrackingManager.requestTrackingAuthorization { status in
+                print("🔒 [AppDelegate] ATT Status: \(status.rawValue)")
                 DispatchQueue.main.async {
                     AppsFlyerLib.shared().start()
                     print("🚀 AppsFlyer: Started tracking")
@@ -160,8 +170,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
                 }
                 if let navController = currentVC as? UINavigationController {
                     if let topVC = navController.topViewController {
-                        if topVC is ChickLoading {
+                        if topVC is EggLoadingBouncingViewController {
                             return .allButUpsideDown
+                        }
+                        // Для игровых экранов принудительно поворачиваем в портрет
+                        if topVC is ChickTabBar || topVC is ChickMenu || topVC is ChickOnboarding {
+                            DispatchQueue.main.async {
+                                self.forcePortraitOrientation(for: window)
+                            }
                         }
                     }
                 }
@@ -170,5 +186,25 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Для всех остальных контроллеров - только портрет
         return .portrait
+    }
+    
+    // MARK: - Orientation Helper
+    private func forcePortraitOrientation(for window: UIWindow?) {
+        guard UIDevice.current.orientation.isLandscape else { return }
+        
+        print("🔄 [AppDelegate] Forcing portrait orientation for game screen")
+        
+        if #available(iOS 16.0, *) {
+            window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait)) { error in
+                if error != nil {
+                    print("❌ [AppDelegate] Failed to force portrait: \(error)")
+                } else {
+                    print("✅ [AppDelegate] Successfully forced portrait orientation")
+                }
+            }
+        } else {
+            UIDevice.current.setValue(UIInterfaceOrientation.portrait.rawValue, forKey: "orientation")
+            print("✅ [AppDelegate] Forced portrait orientation (legacy)")
+        }
     }
 }
