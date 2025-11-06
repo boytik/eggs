@@ -9,6 +9,13 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     private var redirectCount = 0
     private let maxRedirects = 20
     private var fileUploadCompletionHandler: (([URL]?) -> Void)?
+    
+    // Navigation UI
+    private var backButton: UIButton!
+    private var forwardButton: UIButton!
+    private var refreshButton: UIButton!
+    private var navigationContainer: UIView!
+    private var isNavigationVisible = false
 
     init(initialURL: URL) {
         self.initialURL = initialURL
@@ -112,6 +119,10 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         
         // Настройка наблюдателей за клавиатурой
         setupKeyboardObservers()
+        
+        // Настройка навигации
+        setupNavigationControls()
+        setupGestures()
     }
     
     deinit {
@@ -166,6 +177,202 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         UIView.animate(withDuration: animationDuration) {
             self.webView.scrollView.contentInset.bottom = 0
             self.webView.scrollView.scrollIndicatorInsets.bottom = 0
+        }
+    }
+    
+    // MARK: - Navigation Setup
+    
+    private func setupNavigationControls() {
+        // Контейнер для навигационных кнопок
+        navigationContainer = UIView()
+        navigationContainer.backgroundColor = UIColor.black.withAlphaComponent(0.8)
+        navigationContainer.layer.cornerRadius = 25
+        navigationContainer.translatesAutoresizingMaskIntoConstraints = false
+        navigationContainer.alpha = 0 // Изначально скрыт
+        view.addSubview(navigationContainer)
+        
+        // Кнопка "Назад"
+        backButton = createNavigationButton(systemName: "chevron.left", action: #selector(goBack))
+        
+        // Кнопка "Вперед"
+        forwardButton = createNavigationButton(systemName: "chevron.right", action: #selector(goForward))
+        
+        // Кнопка "Обновить"
+        refreshButton = createNavigationButton(systemName: "arrow.clockwise", action: #selector(refresh))
+        
+        // Добавляем кнопки в контейнер
+        let stackView = UIStackView(arrangedSubviews: [backButton, forwardButton, refreshButton])
+        stackView.axis = .horizontal
+        stackView.distribution = .fillEqually
+        stackView.spacing = 20
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        navigationContainer.addSubview(stackView)
+        
+        // Constraints для контейнера
+        NSLayoutConstraint.activate([
+            navigationContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            navigationContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            navigationContainer.heightAnchor.constraint(equalToConstant: 50),
+            navigationContainer.widthAnchor.constraint(equalToConstant: 180)
+        ])
+        
+        // Constraints для stack view
+        NSLayoutConstraint.activate([
+            stackView.topAnchor.constraint(equalTo: navigationContainer.topAnchor, constant: 10),
+            stackView.bottomAnchor.constraint(equalTo: navigationContainer.bottomAnchor, constant: -10),
+            stackView.leadingAnchor.constraint(equalTo: navigationContainer.leadingAnchor, constant: 20),
+            stackView.trailingAnchor.constraint(equalTo: navigationContainer.trailingAnchor, constant: -20)
+        ])
+        
+        print("🧭 [Navigation] Controls created")
+    }
+    
+    private func createNavigationButton(systemName: String, action: Selector) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: systemName), for: .normal)
+        button.tintColor = .white
+        button.addTarget(self, action: action, for: .touchUpInside)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Добавляем анимацию нажатия
+        button.addTarget(self, action: #selector(buttonTouchDown(_:)), for: .touchDown)
+        button.addTarget(self, action: #selector(buttonTouchUp(_:)), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        return button
+    }
+    
+    private func setupGestures() {
+        // Жест для показа/скрытия навигации (двойной тап)
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(toggleNavigation))
+        doubleTap.numberOfTapsRequired = 2
+        webView.addGestureRecognizer(doubleTap)
+        
+        // Жест свайпа влево (назад)
+        let swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(swipeBack))
+        swipeLeft.direction = .right
+        swipeLeft.numberOfTouchesRequired = 2 // Двумя пальцами
+        webView.addGestureRecognizer(swipeLeft)
+        
+        // Жест свайпа вправо (вперед)
+        let swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(swipeForward))
+        swipeRight.direction = .left
+        swipeRight.numberOfTouchesRequired = 2 // Двумя пальцами
+        webView.addGestureRecognizer(swipeRight)
+        
+        // Долгое нажатие для обновления
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(longPressRefresh))
+        longPress.minimumPressDuration = 1.0
+        webView.addGestureRecognizer(longPress)
+        
+        print("🧭 [Navigation] Gestures configured")
+    }
+    
+    // MARK: - Navigation Actions
+    
+    @objc private func goBack() {
+        print("🧭 [Navigation] Going back")
+        if webView.canGoBack {
+            webView.goBack()
+            updateNavigationButtons()
+        }
+    }
+    
+    @objc private func goForward() {
+        print("🧭 [Navigation] Going forward")
+        if webView.canGoForward {
+            webView.goForward()
+            updateNavigationButtons()
+        }
+    }
+    
+    @objc private func refresh() {
+        print("🧭 [Navigation] Refreshing")
+        webView.reload()
+    }
+    
+    @objc private func toggleNavigation() {
+        print("🧭 [Navigation] Toggling navigation visibility")
+        isNavigationVisible.toggle()
+        
+        UIView.animate(withDuration: 0.3) {
+            self.navigationContainer.alpha = self.isNavigationVisible ? 1.0 : 0.0
+        }
+        
+        updateNavigationButtons()
+        
+        // Автоматически скрываем через 5 секунд
+        if isNavigationVisible {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                if self.isNavigationVisible {
+                    self.hideNavigation()
+                }
+            }
+        }
+    }
+    
+    @objc private func swipeBack() {
+        print("🧭 [Navigation] Swipe back gesture")
+        goBack()
+        showNavigationTemporarily()
+    }
+    
+    @objc private func swipeForward() {
+        print("🧭 [Navigation] Swipe forward gesture")
+        goForward()
+        showNavigationTemporarily()
+    }
+    
+    @objc private func longPressRefresh(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began {
+            print("🧭 [Navigation] Long press refresh")
+            refresh()
+            showNavigationTemporarily()
+        }
+    }
+    
+    @objc private func buttonTouchDown(_ button: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            button.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }
+    }
+    
+    @objc private func buttonTouchUp(_ button: UIButton) {
+        UIView.animate(withDuration: 0.1) {
+            button.transform = CGAffineTransform.identity
+        }
+    }
+    
+    private func updateNavigationButtons() {
+        backButton.isEnabled = webView.canGoBack
+        forwardButton.isEnabled = webView.canGoForward
+        
+        backButton.alpha = webView.canGoBack ? 1.0 : 0.5
+        forwardButton.alpha = webView.canGoForward ? 1.0 : 0.5
+        
+        print("🧭 [Navigation] Buttons updated - Back: \(webView.canGoBack), Forward: \(webView.canGoForward)")
+    }
+    
+    private func showNavigationTemporarily() {
+        if !isNavigationVisible {
+            isNavigationVisible = true
+            UIView.animate(withDuration: 0.3) {
+                self.navigationContainer.alpha = 1.0
+            }
+            updateNavigationButtons()
+            
+            // Скрываем через 3 секунды
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                self.hideNavigation()
+            }
+        }
+    }
+    
+    private func hideNavigation() {
+        if isNavigationVisible {
+            isNavigationVisible = false
+            UIView.animate(withDuration: 0.3) {
+                self.navigationContainer.alpha = 0.0
+            }
         }
     }
     
@@ -286,6 +493,7 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("🌍 [WebView] Finished loading: \(webView.url?.absoluteString ?? "unknown")")
+        updateNavigationButtons()
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
