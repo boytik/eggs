@@ -102,8 +102,11 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func showWeb(url: URL) {
+        print("🌐 [UI] Creating WebContainerViewController for URL: \(url)")
         let web = WebContainerViewController(initialURL: url)
+        print("🌐 [UI] WebContainerViewController created, transitioning...")
         transition(to: web)
+        print("🌐 [UI] Transition completed")
         
         // Показываем экран уведомлений только при запуске WebView
         Task {

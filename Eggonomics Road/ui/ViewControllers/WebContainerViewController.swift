@@ -13,9 +13,12 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        print("🌍 [WebView] viewDidLoad started")
         view.backgroundColor = .black
         
         let config = WKWebViewConfiguration()
+        
+        // Базовые настройки JavaScript
         config.preferences.javaScriptEnabled = true
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
         
@@ -23,32 +26,25 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
         
-        // Настройки для обработки множественных редиректов
-        config.processPool = WKProcessPool()
-        
-        // Дополнительные настройки для редиректов
+        // Основные настройки для редиректов
         if #available(iOS 14.0, *) {
             config.limitsNavigationsToAppBoundDomains = false
         }
         
-        // Настройки preferences для лучшей совместимости
-        config.preferences.setValue(true, forKey: "allowFileAccessFromFileURLs")
-        config.preferences.setValue(true, forKey: "allowUniversalAccessFromFileURLs")
+        print("🌍 [WebView] Configuration created with basic redirect support")
         
-        // Настройки для поддержки всех типов контента
-        config.allowsAirPlayForMediaPlayback = true
-        config.allowsPictureInPictureMediaPlayback = true
-        
-        // Настройки пользовательского агента для лучшей совместимости
-        config.applicationNameForUserAgent = "EggonomicsRoad/1.0"
-        
+        print("🌍 [WebView] Creating WKWebView with configuration...")
         webView = WKWebView(frame: .zero, configuration: config)
+        print("🌍 [WebView] WKWebView created successfully")
+        
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         webView.backgroundColor = .black
         webView.scrollView.backgroundColor = .black
         webView.translatesAutoresizingMaskIntoConstraints = false
+        
+        print("🌍 [WebView] WebView delegates and properties configured")
         
         // Убираем навигационную панель - теперь веб-вью занимает весь экран
         view.addSubview(webView)
@@ -61,7 +57,9 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
             webView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor)
         ])
         
+        print("🌍 [WebView] Setup complete, loading initial URL...")
         load(url: initialURL)
+        print("🌍 [WebView] viewDidLoad completed")
     }
     
     override var prefersStatusBarHidden: Bool {
@@ -79,20 +77,10 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     func load(url: URL) {
         print("🌍 [WebView] Loading URL: \(url.absoluteString)")
         
-        var request = URLRequest(url: url)
-        
-        // Настройки для лучшей обработки редиректов
-        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        request.timeoutInterval = 30.0
-        
-        // Добавляем заголовки для лучшей совместимости
-        request.setValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1", forHTTPHeaderField: "User-Agent")
-        request.setValue("*/*", forHTTPHeaderField: "Accept")
-        request.setValue("gzip, deflate, br", forHTTPHeaderField: "Accept-Encoding")
-        request.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-        
-        print("🌍 [WebView] Request headers configured for better redirect handling")
+        let request = URLRequest(url: url)
         webView.load(request)
+        
+        print("🌍 [WebView] Load request sent")
     }
     
     // MARK: - WKNavigationDelegate
