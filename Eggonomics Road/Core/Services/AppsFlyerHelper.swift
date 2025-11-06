@@ -237,6 +237,61 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         if let pushToken = pushToken { merged["push_token"] = pushToken }
         merged["firebase_project_id"] = firebaseProjectID
 
+        // Специальные параметры согласно документации
+        // sub_id_1 до sub_id_5 берем из af_sub1-af_sub5 если есть
+        merged["sub_id_1"] = merged["af_sub1"] ?? ""
+        merged["sub_id_2"] = merged["af_sub2"] ?? ""
+        merged["sub_id_3"] = merged["af_sub3"] ?? ""
+        merged["sub_id_4"] = merged["af_sub4"] ?? ""
+        merged["sub_id_5"] = storeID // id6754333754
+
+        // sub_id_7 - пока пустой
+        merged["sub_id_7"] = ""
+
+        // sub_id_10 - af_id в специальном формате
+        if let af_id = af_id {
+            merged["sub_id_10"] = af_id
+        }
+
+        // sub_id_11 - пока пустой
+        merged["sub_id_11"] = ""
+
+        // extra_param_* - пока пустые
+        merged["extra_param_2"] = ""
+        merged["extra_param_3"] = ""
+        merged["extra_param_4"] = ""
+        merged["extra_param_5"] = ""
+        merged["extra_param_6"] = ""
+        merged["extra_param_8"] = ""
+
+        // extra_param_7 - специальная строка с параметрами
+        let agency = merged["agency"] as? String ?? ""
+        let campaign = merged["campaign"] as? String ?? ""
+        let campaignId = merged["campaign_id"] as? String ?? ""
+        let mediaSource = merged["media_source"] as? String ?? ""
+        let extraParam7 = "af_id=\(af_id ?? "")&agency=\(agency)&campaign=\(campaign)&campaign_id=\(campaignId)&media_source=\(mediaSource)"
+        merged["extra_param_7"] = extraParam7
+
+        // deep_link_value и deep_link_sub1 из deep link данных
+        if let deepLinkData = rawDeepLinkDict() {
+            merged["deep_link_value"] = deepLinkData["deep_link_value"] ?? "test_link"
+            merged["deep_link_sub1"] = deepLinkData["deep_link_sub1"] ?? "test_val"
+        } else {
+            merged["deep_link_value"] = "test_link"
+            merged["deep_link_sub1"] = "test_val"
+        }
+
+        print("🔍 [AF] Added special parameters:")
+        print("🔍 [AF] sub_id_1: '\(merged["sub_id_1"] ?? "")'")
+        print("🔍 [AF] sub_id_2: '\(merged["sub_id_2"] ?? "")'")
+        print("🔍 [AF] sub_id_3: '\(merged["sub_id_3"] ?? "")'")
+        print("🔍 [AF] sub_id_4: '\(merged["sub_id_4"] ?? "")'")
+        print("🔍 [AF] sub_id_5: '\(merged["sub_id_5"] ?? "")'")
+        print("🔍 [AF] sub_id_10: '\(merged["sub_id_10"] ?? "")'")
+        print("🔍 [AF] extra_param_7: '\(merged["extra_param_7"] ?? "")'")
+        print("🔍 [AF] deep_link_value: '\(merged["deep_link_value"] ?? "")'")
+        print("🔍 [AF] deep_link_sub1: '\(merged["deep_link_sub1"] ?? "")'")
+
         // Финальная отладочная информация
         let finalAfStatus = merged["af_status"] as? String ?? "nil"
         print("🔍 [AF] Final af_status: '\(finalAfStatus)'")
