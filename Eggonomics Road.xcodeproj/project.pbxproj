@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3E1301E22EBCBF5A008670DD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */; };
+		3E1301E42EBCCAC4008670DD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3E1301E32EBCCAC4008670DD /* GoogleService-Info.plist */; };
 		3E58A5072EB1125600325AF9 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A5062EB1125600325AF9 /* FirebaseCore */; };
 		3E58A5092EB1125600325AF9 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A5082EB1125600325AF9 /* FirebaseMessaging */; };
 		3E58A50C2EB112BC00325AF9 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A50B2EB112BC00325AF9 /* AppsFlyerLib */; };
@@ -47,7 +47,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		3E1301E32EBCCAC4008670DD /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3E58A50D2EB112F500325AF9 /* Eggonomics Road.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Eggonomics Road.entitlements"; sourceTree = "<group>"; };
 		3E58A50E2EB12ABA00325AF9 /* AppsFlyerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsFlyerHelper.swift; sourceTree = "<group>"; };
 		3E58A50F2EB12ABA00325AF9 /* ConfigClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigClient.swift; sourceTree = "<group>"; };
@@ -103,12 +103,12 @@
 		3E58A5132EB12ABA00325AF9 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				3E1301E32EBCCAC4008670DD /* GoogleService-Info.plist */,
 				3E58A50E2EB12ABA00325AF9 /* AppsFlyerHelper.swift */,
 				3E58A50F2EB12ABA00325AF9 /* ConfigClient.swift */,
 				3E58A5102EB12ABA00325AF9 /* LaunchModeManager.swift */,
 				3E58A5112EB12ABA00325AF9 /* PushPermissionService.swift */,
 				3E58A5122EB12ABA00325AF9 /* Reachability.swift */,
-				3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -271,8 +271,8 @@
 				D24C86A22EA766D00098D34B /* BlackHanSans-Regular.ttf in Resources */,
 				D2A5F7D62EA67780005694C9 /* Assets.xcassets in Resources */,
 				D2961EFE2EA67DF200203986 /* Digitalt.otf in Resources */,
-				3E1301E22EBCBF5A008670DD /* GoogleService-Info.plist in Resources */,
 				D2A5F7D82EA67780005694C9 /* LaunchScreen.storyboard in Resources */,
+				3E1301E42EBCCAC4008670DD /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

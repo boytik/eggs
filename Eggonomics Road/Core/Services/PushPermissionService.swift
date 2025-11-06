@@ -40,16 +40,35 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
     func canAskForPermission() async -> Bool {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         
-        // Можем спросить если:
-        // 1. Разрешение еще не определено (первый запуск)
-        // 2. Или если прошло 3 дня с момента отказа
-        let canAsk = settings.authorizationStatus == .notDetermined || shouldShowCustomAsk()
-        
-        print("🔔 [Push] Can ask for permission: \(canAsk)")
         print("🔔 [Push] Authorization status: \(settings.authorizationStatus.rawValue)")
         print("🔔 [Push] Should show custom ask: \(shouldShowCustomAsk())")
         
-        return canAsk
+        // НЕ показываем экран если:
+        // 1. Пользователь уже дал разрешение (.authorized)
+        // 2. Пользователь запретил (.denied) и еще не прошло 3 дня
+        // 3. Разрешение временно недоступно (.provisional, .ephemeral)
+        
+        switch settings.authorizationStatus {
+        case .authorized:
+            print("🔔 [Push] Permission already granted - not showing screen")
+            return false
+        case .denied:
+            let canReask = shouldShowCustomAsk()
+            print("🔔 [Push] Permission denied - can reask: \(canReask)")
+            return canReask
+        case .notDetermined:
+            print("🔔 [Push] Permission not determined - can ask")
+            return true
+        case .provisional:
+            print("🔔 [Push] Provisional permission - not showing screen")
+            return false
+        case .ephemeral:
+            print("🔔 [Push] Ephemeral permission - not showing screen")
+            return false
+        @unknown default:
+            print("🔔 [Push] Unknown permission status - not showing screen")
+            return false
+        }
     }
 
     func requestSystemAuthorization() {
@@ -57,10 +76,19 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
             let center = UNUserNotificationCenter.current()
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound, .providesAppNotificationSettings])
-                print(granted ? "🔔 [Push] Granted" : "🚫 [Push] Denied")
-                if granted { UIApplication.shared.registerForRemoteNotifications() }
+                
+                if granted {
+                    print("✅ [Push] System permission granted - registering for remote notifications")
+                    UIApplication.shared.registerForRemoteNotifications()
+                } else {
+                    print("🚫 [Push] System permission denied - scheduling re-ask in 3 days")
+                    // Если пользователь отказался в системном диалоге, планируем повторный показ через 3 дня
+                    scheduleReaskIn3Days()
+                }
             } catch {
-                print("❌ [Push] Request error: \(error)")
+                print("❌ [Push] System authorization request error: \(error)")
+                // При ошибке также планируем повторный показ
+                scheduleReaskIn3Days()
             }
         }
     }

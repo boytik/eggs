@@ -113,28 +113,29 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func maybeAskPushPermission() async {
-        // Проверяем что мы в режиме webview и можем спросить разрешение
+        // Проверяем что мы в режиме webview
         guard LaunchModeManager.shared.currentMode == .webview else { 
             print("🔔 [Push] Not in webview mode, skipping permission request")
             return 
         }
         
+        // Проверяем можем ли спросить разрешение
         let canAsk = await PushPermissionService.shared.canAskForPermission()
         guard canAsk else {
-            print("🔔 [Push] Cannot ask for permission at this time")
+            print("🔔 [Push] Cannot ask for permission at this time - user may have already granted or denied recently")
             return
         }
         
-        print("🔔 [Push] Showing push permission screen")
+        print("🔔 [Push] ✅ All conditions met - showing push permission screen")
         
         let ask = PushPermissionViewController(
             onAllow: {
-                print("🔔 [Push] User chose 'Yes, I Want Bonuses!'")
+                print("🔔 [Push] User chose 'Yes, I Want Bonuses!' - requesting system authorization")
                 PushPermissionService.shared.markPermissionAsked()
                 PushPermissionService.shared.requestSystemAuthorization()
             },
             onLater: {
-                print("🔔 [Push] User chose 'Skip'")
+                print("🔔 [Push] User chose 'Skip' - scheduling re-ask in 3 days")
                 PushPermissionService.shared.scheduleReaskIn3Days()
             }
         )
