@@ -112,6 +112,18 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("📮 [Push] FCM token: \(fcmToken ?? "nil")")
     }
+    
+    // Получение текущего FCM токена
+    func getCurrentFCMToken() async -> String? {
+        do {
+            let token = try await Messaging.messaging().token()
+            print("📮 [Push] Retrieved FCM token: \(token)")
+            return token
+        } catch {
+            print("❌ [Push] Failed to get FCM token: \(error)")
+            return nil
+        }
+    }
 }
 
 extension Notification.Name {

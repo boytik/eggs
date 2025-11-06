@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3E1301E22EBCBF5A008670DD /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */; };
 		3E58A5072EB1125600325AF9 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A5062EB1125600325AF9 /* FirebaseCore */; };
 		3E58A5092EB1125600325AF9 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A5082EB1125600325AF9 /* FirebaseMessaging */; };
 		3E58A50C2EB112BC00325AF9 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 3E58A50B2EB112BC00325AF9 /* AppsFlyerLib */; };
@@ -20,7 +21,6 @@
 		3E58A5242EB12ACA00325AF9 /* WebContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E58A51E2EB12ACA00325AF9 /* WebContainerViewController.swift */; };
 		3E58A5252EB12ACA00325AF9 /* PushPermissionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E58A51C2EB12ACA00325AF9 /* PushPermissionViewController.swift */; };
 		3E58A5262EB12ACA00325AF9 /* FanticViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E58A51A2EB12ACA00325AF9 /* FanticViewController.swift */; };
-		3E58A5282EB12BB600325AF9 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 3E58A5272EB12BB600325AF9 /* GoogleService-Info.plist */; };
 		3EF6E34E2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34B2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift */; };
 		3EF6E34F2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34C2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift */; };
 		3EF6E3502EBA18710000C6D5 /* EggLoadingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */; };
@@ -47,6 +47,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3E58A50D2EB112F500325AF9 /* Eggonomics Road.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Eggonomics Road.entitlements"; sourceTree = "<group>"; };
 		3E58A50E2EB12ABA00325AF9 /* AppsFlyerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsFlyerHelper.swift; sourceTree = "<group>"; };
 		3E58A50F2EB12ABA00325AF9 /* ConfigClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigClient.swift; sourceTree = "<group>"; };
@@ -58,7 +59,6 @@
 		3E58A51C2EB12ACA00325AF9 /* PushPermissionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushPermissionViewController.swift; sourceTree = "<group>"; };
 		3E58A51D2EB12ACA00325AF9 /* RootContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootContainerViewController.swift; sourceTree = "<group>"; };
 		3E58A51E2EB12ACA00325AF9 /* WebContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebContainerViewController.swift; sourceTree = "<group>"; };
-		3E58A5272EB12BB600325AF9 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		3EF6E34B2EBA18710000C6D5 /* EggLoadingBouncingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingBouncingViewController.swift; sourceTree = "<group>"; };
 		3EF6E34C2EBA18710000C6D5 /* EggLoadingSpinningViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingSpinningViewController.swift; sourceTree = "<group>"; };
 		3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingViewController.swift; sourceTree = "<group>"; };
@@ -108,7 +108,7 @@
 				3E58A5102EB12ABA00325AF9 /* LaunchModeManager.swift */,
 				3E58A5112EB12ABA00325AF9 /* PushPermissionService.swift */,
 				3E58A5122EB12ABA00325AF9 /* Reachability.swift */,
-				3E58A5272EB12BB600325AF9 /* GoogleService-Info.plist */,
+				3E1301E12EBCBF5A008670DD /* GoogleService-Info.plist */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -271,7 +271,7 @@
 				D24C86A22EA766D00098D34B /* BlackHanSans-Regular.ttf in Resources */,
 				D2A5F7D62EA67780005694C9 /* Assets.xcassets in Resources */,
 				D2961EFE2EA67DF200203986 /* Digitalt.otf in Resources */,
-				3E58A5282EB12BB600325AF9 /* GoogleService-Info.plist in Resources */,
+				3E1301E22EBCBF5A008670DD /* GoogleService-Info.plist in Resources */,
 				D2A5F7D82EA67780005694C9 /* LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

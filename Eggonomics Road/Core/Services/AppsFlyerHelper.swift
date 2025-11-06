@@ -66,16 +66,32 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
     func didResolveDeepLink(_ result: DeepLinkResult) {
         print("🔗 [AF] Deep link received")
         
-        // Проверяем тип ссылки
+        // Проверяем тип ссылки через clickEvent данные
         if let deepLink = result.deepLink {
-            print("🔗 [AF] Deep link URL: \(deepLink.deepLinkValue ?? "nil")")
-            if let url = deepLink.deepLinkValue {
-                if url.contains("onelink.me") {
+            let clickEvent = deepLink.clickEvent
+            print("🔗 [AF] Deep link click event received")
+            
+            // Проверяем различные поля для определения источника
+            if let af_dp = clickEvent["af_dp"] as? String {
+                print("🔗 [AF] Deep link af_dp: \(af_dp)")
+                if af_dp.contains("onelink.me") {
                     print("🔗 [AF] ⭐ This is a OneLink URL")
-                } else if url.contains("app.appsflyer.com") {
+                } else if af_dp.contains("app.appsflyer.com") {
                     print("🔗 [AF] ⭐ This is a direct AppsFlyer URL")
-                } else {
-                    print("🔗 [AF] ⭐ This is a custom URL: \(url)")
+                }
+            }
+            
+            // Также проверяем другие поля
+            if let link = clickEvent["link"] as? String {
+                print("🔗 [AF] Deep link 'link' field: \(link)")
+            }
+            
+            if let originalURL = clickEvent["original_link"] as? String {
+                print("🔗 [AF] Deep link original URL: \(originalURL)")
+                if originalURL.contains("onelink.me") {
+                    print("🔗 [AF] ⭐ Original URL is OneLink")
+                } else if originalURL.contains("app.appsflyer.com") {
+                    print("🔗 [AF] ⭐ Original URL is direct AppsFlyer")
                 }
             }
         }
@@ -207,7 +223,8 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
         let storeID = "id6754333754"
         let locale = Locale.current.identifier
-        let pushToken = try? await Messaging.messaging().token()
+        // Получаем FCM токен через PushPermissionService
+        let pushToken = await PushPermissionService.shared.getCurrentFCMToken()
         let firebaseProjectID = "8934278530"
         print("🔍 [AF] bundleID: '\(bundleID)', storeID: '\(storeID)', locale: '\(locale)'")
         print("🔍 [AF] pushToken: '\(pushToken ?? "nil")', firebaseProjectID: '\(firebaseProjectID)'")
