@@ -19,6 +19,13 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate {
         config.preferences.javaScriptEnabled = true
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
         
+        // Настройки для автовоспроизведения видео
+        config.allowsInlineMediaPlayback = true
+        config.mediaTypesRequiringUserActionForPlayback = []
+        
+        // Настройки для обработки множественных редиректов
+        config.processPool = WKProcessPool()
+        
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
         webView.allowsBackForwardNavigationGestures = true
@@ -26,44 +33,15 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate {
         webView.scrollView.backgroundColor = .black
         webView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Navigation bar
-        let navBar = UIView()
-        navBar.backgroundColor = .black
-        navBar.translatesAutoresizingMaskIntoConstraints = false
-        
-        let backButton = UIButton(type: .system)
-        backButton.setTitle("← Back", for: .normal)
-        backButton.setTitleColor(.white, for: .normal)
-        backButton.addTarget(self, action: #selector(backTapped), for: .touchUpInside)
-        backButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        let refreshButton = UIButton(type: .system)
-        refreshButton.setTitle("↻ Refresh", for: .normal)
-        refreshButton.setTitleColor(.white, for: .normal)
-        refreshButton.addTarget(self, action: #selector(refreshTapped), for: .touchUpInside)
-        refreshButton.translatesAutoresizingMaskIntoConstraints = false
-        
-        view.addSubview(navBar)
+        // Убираем навигационную панель - теперь веб-вью занимает весь экран
         view.addSubview(webView)
-        navBar.addSubview(backButton)
-        navBar.addSubview(refreshButton)
         
         NSLayoutConstraint.activate([
-            navBar.topAnchor.constraint(equalTo: view.topAnchor),
-            navBar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            navBar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            navBar.heightAnchor.constraint(equalToConstant: 70),
-            
-            backButton.leadingAnchor.constraint(equalTo: navBar.leadingAnchor, constant: 16),
-            backButton.centerYAnchor.constraint(equalTo: navBar.centerYAnchor),
-            
-            refreshButton.trailingAnchor.constraint(equalTo: navBar.trailingAnchor, constant: -16),
-            refreshButton.centerYAnchor.constraint(equalTo: navBar.centerYAnchor),
-            
-            webView.topAnchor.constraint(equalTo: navBar.bottomAnchor),
+            // Веб-вью теперь учитывает safeArea со всех сторон
+            webView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             webView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
-            webView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            webView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            webView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            webView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor)
         ])
         
         load(url: initialURL)
@@ -86,13 +64,37 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate {
         webView.load(URLRequest(url: url))
     }
     
-    @objc private func backTapped() {
-        if webView.canGoBack {
-            webView.goBack()
-        }
+    // MARK: - WKNavigationDelegate
+    
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        // Разрешаем все навигационные действия для поддержки множественных редиректов
+        print("🌍 [WebView] Navigation to: \(navigationAction.request.url?.absoluteString ?? "unknown")")
+        decisionHandler(.allow)
     }
     
-    @objc private func refreshTapped() {
-        webView.reload()
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        print("🌍 [WebView] Started loading: \(webView.url?.absoluteString ?? "unknown")")
+    }
+    
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        print("🌍 [WebView] Finished loading: \(webView.url?.absoluteString ?? "unknown")")
+    }
+    
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        print("❌ [WebView] Navigation failed: \(error.localizedDescription)")
+    }
+    
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        print("❌ [WebView] Provisional navigation failed: \(error.localizedDescription)")
+    }
+    
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
+        super.viewWillTransition(to: size, with: coordinator)
+        
+        coordinator.animate(alongsideTransition: { _ in
+            // Обновляем layout веб-вью при изменении ориентации
+            self.view.setNeedsLayout()
+            self.view.layoutIfNeeded()
+        }, completion: nil)
     }
 }

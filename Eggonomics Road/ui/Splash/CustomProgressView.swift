@@ -90,3 +90,4 @@ class CustomProgressView: UIView {
         progressLayer.cornerRadius = cornerRadius
     }
 }
+
