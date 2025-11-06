@@ -56,6 +56,30 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         let debugScript = WKUserScript(source: debugJS, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         userContentController.addUserScript(debugScript)
         
+        // 7. JavaScript для обработки file input
+        let fileUploadJS = """
+        document.addEventListener('change', function(e) {
+            if (e.target && e.target.type === 'file') {
+                console.log('File input detected');
+                // Trigger file upload через prompt
+                var result = prompt('file_upload_request', '');
+                if (result && result !== '') {
+                    // Создаем fake file для input
+                    var dt = new DataTransfer();
+                    var file = new File([''], result.split('/').pop(), {type: 'application/octet-stream'});
+                    dt.items.add(file);
+                    e.target.files = dt.files;
+                    
+                    // Trigger change event
+                    var changeEvent = new Event('change', {bubbles: true});
+                    e.target.dispatchEvent(changeEvent);
+                }
+            }
+        });
+        """
+        let fileUploadScript = WKUserScript(source: fileUploadJS, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        userContentController.addUserScript(fileUploadScript)
+        
         print("🌍 [WebView] Full configuration created with all features")
         
         print("🌍 [WebView] Creating WKWebView with configuration...")
@@ -407,21 +431,29 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     
     // MARK: - File Upload Support
     
-    @available(iOS 18.4, *)
-    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
-        print("📁 [WebView] File upload requested (iOS 18.4+)")
-        print("📁 [WebView] Allows multiple selection: \(parameters.allowsMultipleSelection)")
-        
-        presentFileUploadOptions(allowsMultipleSelection: parameters.allowsMultipleSelection, completionHandler: completionHandler)
-    }
-    
-    // Fallback для старых версий iOS - этот метод вызывается автоматически на iOS < 18.4
+    // Универсальная обработка file upload через JavaScript injection
     func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
-        // Проверяем, не является ли это запросом на загрузку файла
-        if prompt.lowercased().contains("file") || prompt.lowercased().contains("upload") {
-            print("📁 [WebView] File upload detected via JavaScript prompt (fallback)")
+        // Проверяем наш специальный запрос на загрузку файла
+        if prompt == "file_upload_request" {
+            print("📁 [WebView] File upload requested via JavaScript injection")
             
             // Конвертируем в file upload completionHandler
+            let fileCompletionHandler: ([URL]?) -> Void = { urls in
+                if let firstURL = urls?.first {
+                    completionHandler(firstURL.absoluteString)
+                } else {
+                    completionHandler("")
+                }
+            }
+            
+            presentFileUploadOptions(allowsMultipleSelection: false, completionHandler: fileCompletionHandler)
+            return
+        }
+        
+        // Проверяем общие ключевые слова для file upload
+        if prompt.lowercased().contains("file") || prompt.lowercased().contains("upload") {
+            print("📁 [WebView] File upload detected via generic prompt")
+            
             let fileCompletionHandler: ([URL]?) -> Void = { urls in
                 if let firstURL = urls?.first {
                     completionHandler(firstURL.absoluteString)
