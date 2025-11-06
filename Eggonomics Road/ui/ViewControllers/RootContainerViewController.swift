@@ -26,18 +26,29 @@ final class RootContainerViewController: UIViewController {
     }
 
     @objc private func openURLFromPush(_ note: Notification) {
-        guard let url = note.object as? URL else { return }
-        if modeManager.currentMode == .webview {
-            if let webVC = current as? WebContainerViewController {
-                webVC.load(url: url)
-            } else {
-                let web = WebContainerViewController(initialURL: url)
-                transition(to: web)
-            }
+        guard let url = note.object as? URL else { 
+            print("❌ [Push] Invalid URL in notification")
+            return 
+        }
+        
+        print("🔔 [Push] Opening URL from push notification: \(url.absoluteString)")
+        print("🔔 [Push] ⚠️  This URL will NOT be saved - next launch will use config URL")
+        
+        // Всегда открываем веб-вью при получении push-уведомления с URL
+        if let webVC = current as? WebContainerViewController {
+            // Если уже показан веб-вью, просто загружаем новый URL
+            print("🔔 [Push] Loading URL in existing WebView")
+            webVC.load(url: url)
         } else {
-            // If in fan mode, decide policy (e.g., present a web VC modally)
+            // Создаем новый веб-вью и переходим к нему
+            print("🔔 [Push] Creating new WebView for push notification")
             let web = WebContainerViewController(initialURL: url)
-            present(web, animated: true)
+            transition(to: web)
+            
+            // ВАЖНО: НЕ сохраняем URL из push-уведомления!
+            // Режим остается тот же, что был до этого
+            // При следующем запуске будет использоваться URL из конфига
+            print("🔔 [Push] ⚠️  Push URL is temporary - not updating saved mode")
         }
     }
 
@@ -93,22 +104,44 @@ final class RootContainerViewController: UIViewController {
     private func showWeb(url: URL) {
         let web = WebContainerViewController(initialURL: url)
         transition(to: web)
-        maybeAskPushPermission()
+        
+        // Показываем экран уведомлений только при запуске WebView
+        Task {
+            await maybeAskPushPermission()
+        }
         print("🌐 [UI] Transitioned from loading to web view: \(url)")
     }
 
-    private func maybeAskPushPermission() {
-        guard LaunchModeManager.shared.currentMode == .webview,
-              PushPermissionService.shared.shouldShowCustomAsk() else { return }
+    private func maybeAskPushPermission() async {
+        // Проверяем что мы в режиме webview и можем спросить разрешение
+        guard LaunchModeManager.shared.currentMode == .webview else { 
+            print("🔔 [Push] Not in webview mode, skipping permission request")
+            return 
+        }
+        
+        let canAsk = await PushPermissionService.shared.canAskForPermission()
+        guard canAsk else {
+            print("🔔 [Push] Cannot ask for permission at this time")
+            return
+        }
+        
+        print("🔔 [Push] Showing push permission screen")
+        
         let ask = PushPermissionViewController(
             onAllow: {
+                print("🔔 [Push] User chose 'Yes, I Want Bonuses!'")
+                PushPermissionService.shared.markPermissionAsked()
                 PushPermissionService.shared.requestSystemAuthorization()
             },
             onLater: {
+                print("🔔 [Push] User chose 'Skip'")
                 PushPermissionService.shared.scheduleReaskIn3Days()
             }
         )
-        present(ask, animated: true)
+        
+        await MainActor.run {
+            present(ask, animated: true)
+        }
     }
     
     private func forceLayoutUpdate() {
@@ -141,6 +174,24 @@ final class RootContainerViewController: UIViewController {
     // MARK: Flow
     func startFlow(forceFirstLaunch: Bool = false) async {
         print("🚀 [UI] Starting flow, forceFirstLaunch: \(forceFirstLaunch)")
+        
+        // Диагностика для OneLink проблемы
+        let conversionData = AppsFlyerHelper.shared.rawConversionDict()
+        let deepLinkData = AppsFlyerHelper.shared.rawDeepLinkDict()
+        
+        print("🔍 [UI] Conversion data available: \(conversionData != nil)")
+        print("🔍 [UI] Deep link data available: \(deepLinkData != nil)")
+        
+        if let conversion = conversionData {
+            let afStatus = conversion["af_status"] as? String ?? "nil"
+            print("🔍 [UI] Current af_status from conversion: '\(afStatus)'")
+        }
+        
+        if let deepLink = deepLinkData {
+            let pid = deepLink["pid"] as? String ?? "nil"
+            let campaign = deepLink["c"] as? String ?? "nil"
+            print("🔍 [UI] Deep link pid: '\(pid)', campaign: '\(campaign)'")
+        }
         
         // При принудительном первом запуске сбрасываем флаг запретов
         if forceFirstLaunch {

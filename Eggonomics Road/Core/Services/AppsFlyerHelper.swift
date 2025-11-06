@@ -66,6 +66,20 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
     func didResolveDeepLink(_ result: DeepLinkResult) {
         print("🔗 [AF] Deep link received")
         
+        // Проверяем тип ссылки
+        if let deepLink = result.deepLink {
+            print("🔗 [AF] Deep link URL: \(deepLink.deepLinkValue ?? "nil")")
+            if let url = deepLink.deepLinkValue {
+                if url.contains("onelink.me") {
+                    print("🔗 [AF] ⭐ This is a OneLink URL")
+                } else if url.contains("app.appsflyer.com") {
+                    print("🔗 [AF] ⭐ This is a direct AppsFlyer URL")
+                } else {
+                    print("🔗 [AF] ⭐ This is a custom URL: \(url)")
+                }
+            }
+        }
+        
         switch result.status {
         case .found:
             if let deepLinkObj = result.deepLink?.clickEvent {
@@ -77,6 +91,11 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                 }
                 if let campaign = deepLinkObj["c"] as? String {
                     print("🔍 [AF] Deep link campaign: '\(campaign)'")
+                }
+                
+                // Специальная проверка для OneLink
+                if let af_dp = deepLinkObj["af_dp"] as? String {
+                    print("🔍 [AF] OneLink deep link parameter (af_dp): '\(af_dp)'")
                 }
                 
                 // Логируем все ключи deep link для отладки
@@ -175,6 +194,11 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                 }
             }
             
+            // ВАЖНО: Если есть deep link данные, это означает Non-organic установку
+            if !deepLinkData.isEmpty {
+                print("🔗 [AF] Deep link data present - forcing af_status to Non-organic")
+                merged["af_status"] = "Non-organic"
+            }
         }
         
         // Additional client fields

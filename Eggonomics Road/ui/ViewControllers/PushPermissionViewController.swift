@@ -57,7 +57,7 @@ final class PushPermissionViewController: UIViewController {
         containerView.addSubview(iconImageView)
         
         // Заголовок
-        titleLabel.text = "🔔 Stay in the loop!"
+        titleLabel.text = "🎁 Get Exclusive Bonuses!"
         titleLabel.font = UIFont(name: "BlackHanSans-Regular", size: 28) ?? UIFont.systemFont(ofSize: 28, weight: .bold)
         titleLabel.textColor = UIColor(named: "chickBrown") ?? UIColor.brown
         titleLabel.textAlignment = .center
@@ -65,7 +65,7 @@ final class PushPermissionViewController: UIViewController {
         containerView.addSubview(titleLabel)
         
         // Подзаголовок
-        subtitleLabel.text = "Get notified about new articles, quizzes, and exclusive offers to boost your financial knowledge!"
+        subtitleLabel.text = "Enable notifications to receive special offers, bonuses, and exclusive deals directly to your device!"
         subtitleLabel.font = UIFont(name: "BlackHanSans-Regular", size: 16) ?? UIFont.systemFont(ofSize: 16, weight: .medium)
         subtitleLabel.textColor = UIColor(named: "chickBrown") ?? UIColor.brown
         subtitleLabel.textAlignment = .center
@@ -73,7 +73,7 @@ final class PushPermissionViewController: UIViewController {
         containerView.addSubview(subtitleLabel)
         
         // Кнопка разрешить (основная)
-        allowButton.setTitle("✓ Allow Notifications", for: .normal)
+        allowButton.setTitle("🎁 Yes, I Want Bonuses!", for: .normal)
         allowButton.titleLabel?.font = UIFont(name: "BlackHanSans-Regular", size: 18) ?? UIFont.systemFont(ofSize: 18, weight: .bold)
         allowButton.setTitleColor(.white, for: .normal)
         allowButton.backgroundColor = UIColor(named: "chickOrange") ?? UIColor.orange
@@ -83,8 +83,8 @@ final class PushPermissionViewController: UIViewController {
         allowButton.addTarget(self, action: #selector(tapAllow), for: .touchUpInside)
         view.addSubview(allowButton)
         
-        // Кнопка отложить (вторичная)
-        laterButton.setTitle("⏰ Maybe Later", for: .normal)
+        // Кнопка пропустить (вторичная)
+        laterButton.setTitle("Skip", for: .normal)
         laterButton.titleLabel?.font = UIFont(name: "BlackHanSans-Regular", size: 16) ?? UIFont.systemFont(ofSize: 16, weight: .medium)
         laterButton.setTitleColor(UIColor(named: "chickBrown") ?? UIColor.brown, for: .normal)
         laterButton.backgroundColor = UIColor.clear

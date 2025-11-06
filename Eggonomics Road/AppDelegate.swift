@@ -102,23 +102,75 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     // MARK: Remote notifications
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        print("✅ Device registered for remote notifications")
+        print("✅ [Push] Device registered for remote notifications")
+        print("📱 [Push] Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
         Messaging.messaging().apnsToken = deviceToken
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("❌ Failed to register for remote notifications: \(error.localizedDescription)")
+        print("❌ [Push] Failed to register for remote notifications: \(error.localizedDescription)")
+    }
+    
+    // Обработка push-уведомлений когда приложение в фоне
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any]) {
+        print("🔔 [Push] Received remote notification (background): \(userInfo)")
+    }
+    
+    // Обработка push-уведомлений с completion handler
+    func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable: Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+        print("🔔 [Push] Received remote notification with completion handler: \(userInfo)")
+        
+        // Ищем URL в data секции payload (как в примере из документации)
+        var urlString: String?
+        
+        if let dataDict = userInfo["data"] as? [String: Any],
+           let url = dataDict["url"] as? String {
+            urlString = url
+            print("🔔 [Push] Found URL in data section: \(url)")
+        } else if let url = userInfo["url"] as? String {
+            urlString = url
+            print("🔔 [Push] Found URL in root: \(url)")
+        }
+        
+        if let urlString = urlString, 
+           !urlString.isEmpty,
+           let url = URL(string: urlString) {
+            print("🔔 [Push] ✅ Processing URL from background notification: \(urlString)")
+            print("🔔 [Push] ⚠️  This is a temporary URL - will not be saved")
+            NotificationCenter.default.post(name: .openURLInsideApp, object: url)
+            completionHandler(.newData)
+        } else {
+            print("🔔 [Push] ❌ No valid URL found in background notification")
+            completionHandler(.noData)
+        }
     }
 
     // MARK: - Deep Links support (Universal Links / URL Schemes)
     func application(_ application: UIApplication,
                      continue userActivity: NSUserActivity,
                      restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        print("🔗 [AppDelegate] Universal Link received: \(userActivity.webpageURL?.absoluteString ?? "nil")")
+        let urlString = userActivity.webpageURL?.absoluteString ?? "nil"
+        print("🔗 [AppDelegate] Universal Link received: \(urlString)")
+        
+        // Определяем тип ссылки
+        if let url = userActivity.webpageURL?.absoluteString {
+            if url.contains("onelink.me") {
+                print("🔗 [AppDelegate] ⭐ This is a OneLink Universal Link")
+            } else if url.contains("app.appsflyer.com") {
+                print("🔗 [AppDelegate] ⭐ This is a direct AppsFlyer Universal Link")
+            } else {
+                print("🔗 [AppDelegate] ⭐ This is a custom Universal Link: \(url)")
+            }
+        }
+        
         AppsFlyerLib.shared().continue(userActivity, restorationHandler: nil)
         
-        // Перезапускаем flow через небольшую задержку, чтобы AppsFlyer обработал данные
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        // Перезапускаем flow через задержку, чтобы AppsFlyer обработал данные
+        // Для OneLink ссылок может потребоваться больше времени
+        let delay: TimeInterval = urlString.contains("onelink.me") ? 4.0 : 2.0
+        print("🔄 [AppDelegate] Will restart flow in \(delay) seconds")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let window = windowScene.windows.first,
                let rootVC = window.rootViewController as? RootContainerViewController {
@@ -133,11 +185,26 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ app: UIApplication,
                      open url: URL,
                      options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        print("🔗 [AppDelegate] URL Scheme received: \(url.absoluteString)")
+        let urlString = url.absoluteString
+        print("🔗 [AppDelegate] URL Scheme received: \(urlString)")
+        
+        // Определяем тип ссылки
+        if urlString.contains("onelink.me") {
+            print("🔗 [AppDelegate] ⭐ This is a OneLink URL Scheme")
+        } else if urlString.contains("app.appsflyer.com") {
+            print("🔗 [AppDelegate] ⭐ This is a direct AppsFlyer URL Scheme")
+        } else {
+            print("🔗 [AppDelegate] ⭐ This is a custom URL Scheme: \(urlString)")
+        }
+        
         AppsFlyerLib.shared().handleOpen(url, options: options)
         
-        // Перезапускаем flow через небольшую задержку, чтобы AppsFlyer обработал данные
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+        // Перезапускаем flow через задержку, чтобы AppsFlyer обработал данные
+        // Для OneLink ссылок может потребоваться больше времени
+        let delay: TimeInterval = urlString.contains("onelink.me") ? 4.0 : 2.0
+        print("🔄 [AppDelegate] Will restart flow in \(delay) seconds")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                let window = windowScene.windows.first,
                let rootVC = window.rootViewController as? RootContainerViewController {
