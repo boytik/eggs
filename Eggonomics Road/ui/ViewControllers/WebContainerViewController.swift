@@ -1,9 +1,14 @@
 import UIKit
 import WebKit
+import UniformTypeIdentifiers
 
 final class WebContainerViewController: UIViewController, WKNavigationDelegate, WKUIDelegate {
     private var webView: WKWebView!
     private var initialURL: URL
+    private var lastRedirectURL: URL?
+    private var redirectCount = 0
+    private let maxRedirects = 20
+    private var fileUploadCompletionHandler: (([URL]?) -> Void)?
 
     init(initialURL: URL) {
         self.initialURL = initialURL
@@ -18,20 +23,40 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         
         let config = WKWebViewConfiguration()
         
-        // Базовые настройки JavaScript
+        // 1. Полная поддержка JavaScript
         config.preferences.javaScriptEnabled = true
         config.preferences.javaScriptCanOpenWindowsAutomatically = true
         
-        // Настройки для автовоспроизведения видео
+        // 2. Поддержка inline autoplay video
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        config.allowsAirPlayForMediaPlayback = true
+        config.allowsPictureInPictureMediaPlayback = true
         
-        // Основные настройки для редиректов
+        // 3. Поддержка Cookie и сессий
+        let dataStore = WKWebsiteDataStore.default()
+        config.websiteDataStore = dataStore
+        
+        // 4. Настройки для редиректов
         if #available(iOS 14.0, *) {
             config.limitsNavigationsToAppBoundDomains = false
         }
         
-        print("🌍 [WebView] Configuration created with basic redirect support")
+        // 5. User Content Controller для JavaScript injection
+        let userContentController = WKUserContentController()
+        config.userContentController = userContentController
+        
+        // 6. JavaScript для отладки кликов и навигации
+        let debugJS = """
+        console.log('WebView JavaScript loaded');
+        document.addEventListener('click', function(e) {
+            console.log('Click detected on:', e.target.tagName, e.target.type);
+        });
+        """
+        let debugScript = WKUserScript(source: debugJS, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
+        userContentController.addUserScript(debugScript)
+        
+        print("🌍 [WebView] Full configuration created with all features")
         
         print("🌍 [WebView] Creating WKWebView with configuration...")
         webView = WKWebView(frame: .zero, configuration: config)
@@ -60,6 +85,64 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         print("🌍 [WebView] Setup complete, loading initial URL...")
         load(url: initialURL)
         print("🌍 [WebView] viewDidLoad completed")
+        
+        // Настройка наблюдателей за клавиатурой
+        setupKeyboardObservers()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
+    // MARK: - Keyboard Handling
+    
+    private func setupKeyboardObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillShow),
+            name: UIResponder.keyboardWillShowNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(keyboardWillHide),
+            name: UIResponder.keyboardWillHideNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func keyboardWillShow(_ notification: Notification) {
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let animationDuration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else {
+            return
+        }
+        
+        print("⌨️ [WebView] Keyboard will show, height: \(keyboardFrame.height)")
+        
+        // Получаем высоту клавиатуры с учетом safe area
+        let keyboardHeight = keyboardFrame.height - view.safeAreaInsets.bottom
+        
+        // Анимируем изменение constraints
+        UIView.animate(withDuration: animationDuration) {
+            // Добавляем отступ снизу для WebView
+            self.webView.scrollView.contentInset.bottom = keyboardHeight
+            self.webView.scrollView.scrollIndicatorInsets.bottom = keyboardHeight
+        }
+    }
+    
+    @objc private func keyboardWillHide(_ notification: Notification) {
+        guard let animationDuration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else {
+            return
+        }
+        
+        print("⌨️ [WebView] Keyboard will hide")
+        
+        // Анимируем возврат к исходному состоянию
+        UIView.animate(withDuration: animationDuration) {
+            self.webView.scrollView.contentInset.bottom = 0
+            self.webView.scrollView.scrollIndicatorInsets.bottom = 0
+        }
     }
     
     override var prefersStatusBarHidden: Bool {
@@ -86,12 +169,33 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     // MARK: - WKNavigationDelegate
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
-        let url = navigationAction.request.url?.absoluteString ?? "unknown"
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.cancel)
+            return
+        }
+        
+        let urlString = url.absoluteString
         let navigationType = navigationAction.navigationType
         
-        print("🌍 [WebView] Navigation to: \(url)")
+        print("🌍 [WebView] Navigation to: \(urlString)")
         print("🌍 [WebView] Navigation type: \(navigationType.rawValue)")
         print("🌍 [WebView] Target frame is main frame: \(navigationAction.targetFrame?.isMainFrame ?? false)")
+        
+        // Обработка диплинков
+        if isDeepLink(url: url) {
+            print("🔗 [WebView] Deep link detected: \(urlString)")
+            handleDeepLink(url: url)
+            decisionHandler(.cancel)
+            return
+        }
+        
+        // Обработка отсутствующих target frames (часто для JavaScript кнопок)
+        if navigationAction.targetFrame == nil {
+            print("🌍 [WebView] No target frame - loading in main frame")
+            webView.load(navigationAction.request)
+            decisionHandler(.cancel)
+            return
+        }
         
         // Разрешаем все типы навигации для поддержки редиректов
         switch navigationType {
@@ -106,12 +210,50 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         case .formResubmitted:
             print("🌍 [WebView] Form resubmitted - allowing")
         case .other:
-            print("🌍 [WebView] Other navigation (redirect) - allowing")
+            print("🌍 [WebView] Other navigation (JavaScript/redirect) - allowing")
         @unknown default:
             print("🌍 [WebView] Unknown navigation type - allowing")
         }
         
         decisionHandler(.allow)
+    }
+    
+    // MARK: - Deep Link Handling
+    
+    private func isDeepLink(url: URL) -> Bool {
+        let scheme = url.scheme?.lowercased() ?? ""
+        
+        // Проверяем на диплинки (не http/https)
+        if scheme != "http" && scheme != "https" {
+            return true
+        }
+        
+        // Проверяем на специальные домены
+        let host = url.host?.lowercased() ?? ""
+        let deepLinkHosts = ["itunes.apple.com", "apps.apple.com", "play.google.com", "market.android.com"]
+        
+        return deepLinkHosts.contains(host)
+    }
+    
+    private func handleDeepLink(url: URL) {
+        print("🔗 [WebView] Handling deep link: \(url.absoluteString)")
+        
+        // Открываем диплинк в системе
+        if UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url) { success in
+                print("🔗 [WebView] Deep link opened: \(success)")
+                
+                // Возвращаемся на предыдущую страницу после открытия диплинка
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    if self.webView.canGoBack {
+                        print("🔗 [WebView] Going back after deep link")
+                        self.webView.goBack()
+                    }
+                }
+            }
+        } else {
+            print("❌ [WebView] Cannot open deep link: \(url.absoluteString)")
+        }
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
@@ -129,12 +271,28 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         print("❌ [WebView] Provisional navigation failed: \(error.localizedDescription)")
         
-        // Дополнительная информация об ошибке
         let nsError = error as NSError
         print("❌ [WebView] Error domain: \(nsError.domain)")
         print("❌ [WebView] Error code: \(nsError.code)")
         
-        // Обрабатываем специфические ошибки
+        // Обработка ERR_TOO_MANY_REDIRECTS
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorHTTPTooManyRedirects {
+            print("🔄 [WebView] Too many redirects detected - attempting recovery")
+            
+            if let url = lastRedirectURL {
+                print("🔄 [WebView] Loading last redirect URL: \(url.absoluteString)")
+                let request = URLRequest(url: url)
+                webView.load(request)
+                return
+            } else if redirectCount > 0 {
+                print("🔄 [WebView] Loading initial URL as fallback")
+                let request = URLRequest(url: initialURL)
+                webView.load(request)
+                return
+            }
+        }
+        
+        // Обрабатываем другие специфические ошибки
         if nsError.domain == NSURLErrorDomain {
             switch nsError.code {
             case NSURLErrorServerCertificateUntrusted:
@@ -152,7 +310,15 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     }
     
     func webView(_ webView: WKWebView, didReceiveServerRedirectForProvisionalNavigation navigation: WKNavigation!) {
-        print("🔄 [WebView] Server redirect received to: \(webView.url?.absoluteString ?? "unknown")")
+        let currentURL = webView.url?.absoluteString ?? "unknown"
+        redirectCount += 1
+        lastRedirectURL = webView.url
+        
+        print("🔄 [WebView] Server redirect #\(redirectCount) received to: \(currentURL)")
+        
+        if redirectCount > maxRedirects {
+            print("⚠️ [WebView] Too many redirects (\(redirectCount)), may hit limit soon")
+        }
     }
     
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
@@ -216,5 +382,181 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         })
         
         present(alert, animated: true)
+    }
+    
+    // MARK: - Media Permissions
+    
+    @available(iOS 15.0, *)
+    func webView(_ webView: WKWebView, requestMediaCapturePermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, type: WKMediaCaptureType, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        print("🎥 [WebView] Media capture permission requested for: \(origin.host)")
+        print("🎥 [WebView] Media type: \(type.rawValue)")
+        
+        // Автоматически разрешаем доступ к медиа
+        decisionHandler(.grant)
+        print("🎥 [WebView] Media permission granted automatically")
+    }
+    
+    @available(iOS 14.5, *)
+    func webView(_ webView: WKWebView, requestDeviceOrientationAndMotionPermissionFor origin: WKSecurityOrigin, initiatedByFrame frame: WKFrameInfo, decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+        print("📱 [WebView] Device orientation permission requested for: \(origin.host)")
+        
+        // Автоматически разрешаем доступ к ориентации устройства
+        decisionHandler(.grant)
+        print("📱 [WebView] Device orientation permission granted automatically")
+    }
+    
+    // MARK: - File Upload Support
+    
+    @available(iOS 18.4, *)
+    func webView(_ webView: WKWebView, runOpenPanelWith parameters: WKOpenPanelParameters, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping ([URL]?) -> Void) {
+        print("📁 [WebView] File upload requested (iOS 18.4+)")
+        print("📁 [WebView] Allows multiple selection: \(parameters.allowsMultipleSelection)")
+        
+        presentFileUploadOptions(allowsMultipleSelection: parameters.allowsMultipleSelection, completionHandler: completionHandler)
+    }
+    
+    // Fallback для старых версий iOS - этот метод вызывается автоматически на iOS < 18.4
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (String?) -> Void) {
+        // Проверяем, не является ли это запросом на загрузку файла
+        if prompt.lowercased().contains("file") || prompt.lowercased().contains("upload") {
+            print("📁 [WebView] File upload detected via JavaScript prompt (fallback)")
+            
+            // Конвертируем в file upload completionHandler
+            let fileCompletionHandler: ([URL]?) -> Void = { urls in
+                if let firstURL = urls?.first {
+                    completionHandler(firstURL.absoluteString)
+                } else {
+                    completionHandler(nil)
+                }
+            }
+            
+            presentFileUploadOptions(allowsMultipleSelection: false, completionHandler: fileCompletionHandler)
+            return
+        }
+        
+        // Обычный JavaScript prompt
+        let alert = UIAlertController(title: "Input", message: prompt, preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.text = defaultText
+        }
+        alert.addAction(UIAlertAction(title: "OK", style: .default) { _ in
+            completionHandler(alert.textFields?.first?.text)
+        })
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            completionHandler(nil)
+        })
+        present(alert, animated: true)
+    }
+    
+    private func presentFileUploadOptions(allowsMultipleSelection: Bool, completionHandler: @escaping ([URL]?) -> Void) {
+        let alertController = UIAlertController(title: "Select Source", message: "Choose how to upload files", preferredStyle: .actionSheet)
+        
+        // Camera option
+        if UIImagePickerController.isSourceTypeAvailable(.camera) {
+            alertController.addAction(UIAlertAction(title: "Camera", style: .default) { _ in
+                self.presentImagePicker(sourceType: .camera, completionHandler: completionHandler)
+            })
+        }
+        
+        // Photo Library option
+        if UIImagePickerController.isSourceTypeAvailable(.photoLibrary) {
+            alertController.addAction(UIAlertAction(title: "Photo Library", style: .default) { _ in
+                self.presentImagePicker(sourceType: .photoLibrary, completionHandler: completionHandler)
+            })
+        }
+        
+        // Document picker option
+        alertController.addAction(UIAlertAction(title: "Files", style: .default) { _ in
+            self.presentDocumentPicker(allowsMultipleSelection: allowsMultipleSelection, completionHandler: completionHandler)
+        })
+        
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            completionHandler(nil)
+        })
+        
+        // For iPad
+        if let popover = alertController.popoverPresentationController {
+            popover.sourceView = webView
+            popover.sourceRect = CGRect(x: webView.bounds.midX, y: webView.bounds.midY, width: 0, height: 0)
+        }
+        
+        present(alertController, animated: true)
+    }
+    
+    private func presentImagePicker(sourceType: UIImagePickerController.SourceType, completionHandler: @escaping ([URL]?) -> Void) {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = self
+        
+        // Store completion handler for later use
+        self.fileUploadCompletionHandler = completionHandler
+        
+        present(picker, animated: true)
+    }
+    
+    private func presentDocumentPicker(allowsMultipleSelection: Bool = true, completionHandler: @escaping ([URL]?) -> Void) {
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.item])
+        picker.delegate = self
+        picker.allowsMultipleSelection = allowsMultipleSelection
+        
+        // Store completion handler for later use
+        self.fileUploadCompletionHandler = completionHandler
+        
+        present(picker, animated: true)
+    }
+}
+
+// MARK: - UIImagePickerControllerDelegate & UINavigationControllerDelegate
+
+extension WebContainerViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        picker.dismiss(animated: true)
+        
+        guard let image = info[.originalImage] as? UIImage else {
+            fileUploadCompletionHandler?(nil)
+            return
+        }
+        
+        // Save image to temporary directory
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "upload_\(Date().timeIntervalSince1970).jpg"
+        let fileURL = tempDir.appendingPathComponent(fileName)
+        
+        do {
+            if let imageData = image.jpegData(compressionQuality: 0.8) {
+                try imageData.write(to: fileURL)
+                print("📁 [WebView] Image saved to: \(fileURL.path)")
+                fileUploadCompletionHandler?([fileURL])
+            } else {
+                fileUploadCompletionHandler?(nil)
+            }
+        } catch {
+            print("❌ [WebView] Failed to save image: \(error)")
+            fileUploadCompletionHandler?(nil)
+        }
+        
+        fileUploadCompletionHandler = nil
+    }
+    
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
+        fileUploadCompletionHandler?(nil)
+        fileUploadCompletionHandler = nil
+    }
+}
+
+// MARK: - UIDocumentPickerDelegate
+
+extension WebContainerViewController: UIDocumentPickerDelegate {
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        print("📁 [WebView] Documents selected: \(urls.count)")
+        fileUploadCompletionHandler?(urls)
+        fileUploadCompletionHandler = nil
+    }
+    
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        print("📁 [WebView] Document picker cancelled")
+        fileUploadCompletionHandler?(nil)
+        fileUploadCompletionHandler = nil
     }
 }
