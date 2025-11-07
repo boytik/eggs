@@ -245,9 +245,13 @@ final class RootContainerViewController: UIViewController {
             print("🔍 [DEBUG] Original af_status from merged: '\(afStatus ?? "nil")'")
             print("🔍 [DEBUG] Full merged payload: \(merged)")
             
-            let canAskConfig = (afStatus == "non-organic")
-            print("🔍 [DEBUG] canAskConfig: \(canAskConfig)")
-            print("🔍 [DEBUG] Logic: af_status '\(afStatus ?? "nil")' == 'non-organic' = \(canAskConfig)")
+            // ПРИНУДИТЕЛЬНАЯ РЕГИСТРАЦИЯ: всегда отправляем данные для регистрации AppsFlyer ID + FCM токена
+            let originalCanAskConfig = (afStatus == "non-organic")
+            let canAskConfig = true  // Принудительно для регистрации
+            print("🔍 [DEBUG] Original canAskConfig: \(originalCanAskConfig)")
+            print("🔍 [DEBUG] FORCED canAskConfig: \(canAskConfig) (для регистрации на сервере)")
+            print("🔍 [DEBUG] Logic: af_status '\(afStatus ?? "nil")' == 'non-organic' = \(originalCanAskConfig)")
+            print("🔍 [DEBUG] ⚠️  FORCING CONFIG REQUEST TO REGISTER APPSFLYER ID + FCM TOKEN")
             
             
             if canAskConfig {
