@@ -196,40 +196,63 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         // Ожидаем получения конверсионных данных
         _ = await waitForConversionData()
         
-        // Start with conversion data
-        var merged: [String: Any] = rawConversionDict() ?? [:]
+        // Правильная логика согласно документации:
+        // "В случае совпадения используются первые полученные данные"
+        // Deep link данные обычно приходят первыми, поэтому они имеют приоритет
         
+        var merged: [String: Any] = [:]
         
-        // Add UDL data if available (conversion data takes priority for duplicate keys)
+        // Сначала добавляем conversion data
+        if let conversionData = rawConversionDict() {
+            print("📊 [AF] Adding conversion data to payload (\(conversionData.count) keys)")
+            for (key, value) in conversionData {
+                merged[key] = value
+            }
+        }
+        
+        // Затем добавляем UDL data (перезаписывает совпадающие ключи, т.к. deep link данные "первые")
         if let deepLinkData = rawDeepLinkDict() {
-            print("🔗 [AF] Adding UDL data to payload")
+            print("🔗 [AF] Adding UDL data to payload (\(deepLinkData.count) keys)")
+            print("🔗 [AF] UDL keys: \(Array(deepLinkData.keys).sorted())")
+            
             for (key, value) in deepLinkData {
-                // Only add if key doesn't exist (conversion data has priority)
-                if merged[key] == nil {
-                    merged[key] = value
+                if merged[key] != nil {
+                    print("🔄 [AF] Overriding key '\(key)' with UDL value (first received data priority)")
                 }
+                merged[key] = value
             }
             
             // ВАЖНО: Если есть deep link данные, это означает Non-organic установку
             if !deepLinkData.isEmpty {
-                print("🔗 [AF] Deep link data present - forcing af_status to Non-organic")
+                print("🔗 [AF] Deep link data present - ensuring af_status is Non-organic")
                 merged["af_status"] = "Non-organic"
             }
         }
         
         // Additional client fields
         let af_id = AppsFlyerLib.shared().getAppsFlyerUID()
-        print("🔍 [AF] af_id value: '\(af_id ?? "nil")'")
+        print("🔍 [AF] af_id value: '\(af_id)'")
+        print("🔍 [AF] af_id type: \(type(of: af_id))")
+        print("🔍 [AF] af_id isEmpty: \(af_id.isEmpty)")
+        
+        // Используем только реальный AppsFlyer ID
+        let finalAfId = af_id
+        print("🔍 [AF] Using AppsFlyer ID: '\(finalAfId)'")
+        
+        if af_id.isEmpty {
+            print("⚠️ [AF] WARNING: AppsFlyer ID is empty - this may affect analytics and push notifications")
+        }
+        
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
         let storeID = "id6754333754"
         let locale = Locale.current.identifier
         // Получаем FCM токен через PushPermissionService
         let pushToken = await PushPermissionService.shared.getCurrentFCMToken()
-        let firebaseProjectID = "8934278530"
+        let firebaseProjectID = "279290682673"
         print("🔍 [AF] bundleID: '\(bundleID)', storeID: '\(storeID)', locale: '\(locale)'")
         print("🔍 [AF] pushToken: '\(pushToken ?? "nil")', firebaseProjectID: '\(firebaseProjectID)'")
 
-        merged["af_id"] = af_id
+        merged["af_id"] = finalAfId
         merged["bundle_id"] = bundleID
         merged["os"] = "iOS"
         merged["store_id"] = storeID
@@ -249,9 +272,7 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         merged["sub_id_7"] = ""
 
         // sub_id_10 - af_id в специальном формате
-        if let af_id = af_id {
-            merged["sub_id_10"] = af_id
-        }
+        merged["sub_id_10"] = finalAfId
 
         // sub_id_11 - пока пустой
         merged["sub_id_11"] = ""
@@ -269,7 +290,7 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         let campaign = merged["campaign"] as? String ?? ""
         let campaignId = merged["campaign_id"] as? String ?? ""
         let mediaSource = merged["media_source"] as? String ?? ""
-        let extraParam7 = "af_id=\(af_id ?? "")&agency=\(agency)&campaign=\(campaign)&campaign_id=\(campaignId)&media_source=\(mediaSource)"
+        let extraParam7 = "af_id=\(finalAfId)&agency=\(agency)&campaign=\(campaign)&campaign_id=\(campaignId)&media_source=\(mediaSource)"
         merged["extra_param_7"] = extraParam7
 
         // deep_link_value и deep_link_sub1 из deep link данных
@@ -291,6 +312,34 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         print("🔍 [AF] extra_param_7: '\(merged["extra_param_7"] ?? "")'")
         print("🔍 [AF] deep_link_value: '\(merged["deep_link_value"] ?? "")'")
         print("🔍 [AF] deep_link_sub1: '\(merged["deep_link_sub1"] ?? "")'")
+        print("🔍 [AF] Final af_id used: '\(finalAfId)'")
+
+        // Подробная диагностика для OneLink
+        print("🔍 [AF] === DIAGNOSTIC INFO ===")
+        print("🔍 [AF] Has conversion data: \(rawConversionDict() != nil)")
+        print("🔍 [AF] Has deep link data: \(rawDeepLinkDict() != nil)")
+        
+        if let conversionData = rawConversionDict() {
+            print("🔍 [AF] Conversion data af_status: '\(conversionData["af_status"] ?? "nil")'")
+            print("🔍 [AF] Conversion data keys count: \(conversionData.count)")
+        }
+        
+        if let deepLinkData = rawDeepLinkDict() {
+            print("🔍 [AF] Deep link data af_status: '\(deepLinkData["af_status"] ?? "nil")'")
+            print("🔍 [AF] Deep link data keys count: \(deepLinkData.count)")
+            print("🔍 [AF] Deep link data sample keys: \(Array(deepLinkData.keys).prefix(10).sorted())")
+        }
+        
+        // Проверяем null значения
+        let nullKeys = merged.compactMap { key, value in
+            if value is NSNull { return key }
+            return nil
+        }
+        if !nullKeys.isEmpty {
+            print("🔍 [AF] Keys with null values: \(nullKeys.sorted())")
+        }
+        
+        print("🔍 [AF] === END DIAGNOSTIC ===")
 
         // Финальная отладочная информация
         let finalAfStatus = merged["af_status"] as? String ?? "nil"

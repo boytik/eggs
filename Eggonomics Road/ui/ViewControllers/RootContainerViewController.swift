@@ -35,10 +35,10 @@ final class RootContainerViewController: UIViewController {
         print("🔔 [Push] ⚠️  This URL will NOT be saved - next launch will use config URL")
         
         // Всегда открываем веб-вью при получении push-уведомления с URL
-        if let webVC = current as? WebContainerViewController {
+            if let webVC = current as? WebContainerViewController {
             // Если уже показан веб-вью, просто загружаем новый URL
             print("🔔 [Push] Loading URL in existing WebView")
-            webVC.load(url: url)
+                webVC.load(url: url)
         } else {
             // Создаем новый веб-вью и переходим к нему
             print("🔔 [Push] Creating new WebView for push notification")
@@ -95,8 +95,8 @@ final class RootContainerViewController: UIViewController {
         } else {
             // Если по какой-то причине загрузочного экрана нет, создаем новый
             let vc = EggLoadingBouncingViewController()
-            let navController = UINavigationController(rootViewController: vc)
-            transition(to: navController)
+        let navController = UINavigationController(rootViewController: vc)
+        transition(to: navController)
             print("🎮 [UI] Created new loading screen for fan mode")
         }
     }
@@ -144,7 +144,7 @@ final class RootContainerViewController: UIViewController {
         )
         
         await MainActor.run {
-            present(ask, animated: true)
+        present(ask, animated: true)
         }
     }
     
