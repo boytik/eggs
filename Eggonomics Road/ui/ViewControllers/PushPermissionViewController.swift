@@ -3,7 +3,7 @@ import UIKit
 final class PushPermissionViewController: UIViewController {
     private let onAllow: () -> Void
     private let onLater: () -> Void
-    
+
     // UI элементы
     private let backgroundImageView = UIImageView()
     private let containerView = UIView()
@@ -121,7 +121,7 @@ final class PushPermissionViewController: UIViewController {
         [backgroundImageView, containerView, iconImageView, titleLabel, subtitleLabel, allowButton, laterButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
         }
-        
+
         NSLayoutConstraint.activate([
             // Фоновое изображение
             backgroundImageView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -145,7 +145,7 @@ final class PushPermissionViewController: UIViewController {
             titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 20),
             titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
             titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -20),
-            
+
             // Подзаголовок
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 15),
             subtitleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 20),
@@ -174,7 +174,7 @@ final class PushPermissionViewController: UIViewController {
         }) { _ in
             self.dismiss(animated: false)
             self.onAllow()
-        }
+    }
     }
     
     @objc private func tapLater() {

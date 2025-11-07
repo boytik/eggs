@@ -18,7 +18,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         
         print("🚀 App: Starting initialization...")
-        
+
         // Проверяем launch options на наличие URL
         if let url = launchOptions?[.url] as? URL {
             print("🔗 [AppDelegate] Launched with URL: \(url.absoluteString)")

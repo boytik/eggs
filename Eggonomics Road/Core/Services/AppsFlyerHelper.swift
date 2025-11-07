@@ -8,8 +8,8 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
     private override init() {}
 
     private let conversionKey = "af_raw_conversion_json"
-    private let deepLinkKey = "af_raw_deeplink_json" // store raw UDL JSON string
-    
+    private let deepLinkKey = "af_raw_deeplink_json" // store raw UDL JSON string 
+
     // Механизм ожидания конверсионных данных
     private var conversionContinuation: CheckedContinuation<[AnyHashable: Any]?, Never>?
     private var hasReceivedConversionData = false 
@@ -22,10 +22,12 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         af.isDebug = true  // ВРЕМЕННО включен для отладки
         af.start()
         print("🚀 [AF] Started")
+        LogCollector.shared.logAppsFlyer("SDK started with appID: \(appID), devKey: \(devKey)")
     }
 
     func onConversionDataSuccess(_ conversionInfo: [AnyHashable : Any]) {
         print("✅ [AF] Conversion received")
+        LogCollector.shared.logAppsFlyer("Conversion data received: \(conversionInfo.count) keys")
         
         // Логируем ключевые параметры
         let afStatus = conversionInfo["af_status"] as? String ?? "nil"
@@ -219,8 +221,8 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
                 if merged[key] != nil {
                     print("🔄 [AF] Overriding key '\(key)' with UDL value (first received data priority)")
                 }
-                merged[key] = value
-            }
+                    merged[key] = value
+                }
             
             // ВАЖНО: Если есть deep link данные, это означает Non-organic установку
             if !deepLinkData.isEmpty {

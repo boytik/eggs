@@ -16,6 +16,9 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     private var refreshButton: UIButton!
     private var navigationContainer: UIView!
     private var isNavigationVisible = false
+    
+    // Log copy button
+    private var logCopyButton: UIButton!
 
     init(initialURL: URL) {
         self.initialURL = initialURL
@@ -26,6 +29,7 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     override func viewDidLoad() {
         super.viewDidLoad()
         print("🌍 [WebView] viewDidLoad started")
+        LogCollector.shared.logWebView("WebView viewDidLoad started")
         view.backgroundColor = .black
         
         let config = WKWebViewConfiguration()
@@ -123,6 +127,9 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         // Настройка навигации
         setupNavigationControls()
         setupGestures()
+        
+        // Настройка кнопки копирования логов
+        setupLogCopyButton()
     }
     
     deinit {
@@ -267,6 +274,34 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         print("🧭 [Navigation] Gestures configured")
     }
     
+    // MARK: - Log Copy Button Setup
+    
+    private func setupLogCopyButton() {
+        logCopyButton = UIButton(type: .system)
+        logCopyButton.setTitle("📋", for: .normal)
+        logCopyButton.titleLabel?.font = UIFont.systemFont(ofSize: 24)
+        logCopyButton.backgroundColor = UIColor.black.withAlphaComponent(0.7)
+        logCopyButton.layer.cornerRadius = 25
+        logCopyButton.translatesAutoresizingMaskIntoConstraints = false
+        logCopyButton.addTarget(self, action: #selector(copyLogsToClipboard), for: .touchUpInside)
+        
+        // Добавляем анимацию нажатия
+        logCopyButton.addTarget(self, action: #selector(logButtonTouchDown), for: .touchDown)
+        logCopyButton.addTarget(self, action: #selector(logButtonTouchUp), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        
+        view.addSubview(logCopyButton)
+        
+        // Размещаем в правом верхнем углу с учетом safe area
+        NSLayoutConstraint.activate([
+            logCopyButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 10),
+            logCopyButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -10),
+            logCopyButton.widthAnchor.constraint(equalToConstant: 50),
+            logCopyButton.heightAnchor.constraint(equalToConstant: 50)
+        ])
+        
+        print("📋 [LogCollector] Log copy button created")
+    }
+    
     // MARK: - Navigation Actions
     
     @objc private func goBack() {
@@ -342,6 +377,96 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         }
     }
     
+    // MARK: - Log Copy Actions
+    
+    @objc private func copyLogsToClipboard() {
+        print("📋 [LogCollector] Copy logs button pressed")
+        
+        // Показываем опции копирования
+        let alert = UIAlertController(title: "📋 Копировать логи", message: "Выберите период логов для копирования", preferredStyle: .actionSheet)
+        
+        alert.addAction(UIAlertAction(title: "Последние 5 минут", style: .default) { _ in
+            LogCollector.shared.copyRecentLogsToClipboard(minutes: 5)
+            self.showCopyConfirmation(period: "5 минут")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Последние 10 минут", style: .default) { _ in
+            LogCollector.shared.copyRecentLogsToClipboard(minutes: 10)
+            self.showCopyConfirmation(period: "10 минут")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Последние 30 минут", style: .default) { _ in
+            LogCollector.shared.copyRecentLogsToClipboard(minutes: 30)
+            self.showCopyConfirmation(period: "30 минут")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Все логи", style: .default) { _ in
+            LogCollector.shared.copyAllLogsToClipboard()
+            self.showCopyConfirmation(period: "все")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Статистика", style: .default) { _ in
+            let stats = LogCollector.shared.getLogStats()
+            UIPasteboard.general.string = stats
+            self.showCopyConfirmation(period: "статистика")
+        })
+        
+        alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
+        
+        // For iPad
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = logCopyButton
+            popover.sourceRect = logCopyButton.bounds
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    @objc private func logButtonTouchDown() {
+        UIView.animate(withDuration: 0.1) {
+            self.logCopyButton.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+        }
+    }
+    
+    @objc private func logButtonTouchUp() {
+        UIView.animate(withDuration: 0.1) {
+            self.logCopyButton.transform = CGAffineTransform.identity
+        }
+    }
+    
+    private func showCopyConfirmation(period: String) {
+        // Показываем временное уведомление
+        let confirmationLabel = UILabel()
+        confirmationLabel.text = "📋 Логи (\(period)) скопированы!"
+        confirmationLabel.textColor = .white
+        confirmationLabel.backgroundColor = UIColor.green.withAlphaComponent(0.8)
+        confirmationLabel.textAlignment = .center
+        confirmationLabel.layer.cornerRadius = 8
+        confirmationLabel.clipsToBounds = true
+        confirmationLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        view.addSubview(confirmationLabel)
+        
+        NSLayoutConstraint.activate([
+            confirmationLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            confirmationLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 70),
+            confirmationLabel.heightAnchor.constraint(equalToConstant: 40),
+            confirmationLabel.widthAnchor.constraint(equalToConstant: 250)
+        ])
+        
+        // Анимация появления и исчезновения
+        confirmationLabel.alpha = 0
+        UIView.animate(withDuration: 0.3, animations: {
+            confirmationLabel.alpha = 1
+        }) { _ in
+            UIView.animate(withDuration: 0.3, delay: 2.0, animations: {
+                confirmationLabel.alpha = 0
+            }) { _ in
+                confirmationLabel.removeFromSuperview()
+            }
+        }
+    }
+    
     private func updateNavigationButtons() {
         backButton.isEnabled = webView.canGoBack
         forwardButton.isEnabled = webView.canGoForward
@@ -390,6 +515,7 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
 
     func load(url: URL) {
         print("🌍 [WebView] Loading URL: \(url.absoluteString)")
+        LogCollector.shared.logWebView("Loading URL: \(url.absoluteString)")
         
         let request = URLRequest(url: url)
         webView.load(request)
@@ -479,8 +605,8 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
                     if self.webView.canGoBack {
                         print("🔗 [WebView] Going back after deep link")
                         self.webView.goBack()
-                    }
-                }
+        }
+    }
             }
         } else {
             print("❌ [WebView] Cannot open deep link: \(url.absoluteString)")

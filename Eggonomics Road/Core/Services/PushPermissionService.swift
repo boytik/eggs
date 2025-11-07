@@ -76,9 +76,11 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
             let center = UNUserNotificationCenter.current()
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .badge, .sound, .providesAppNotificationSettings])
+                LogCollector.shared.logPush("System authorization result: \(granted)")
                 
                 if granted {
                     print("✅ [Push] System permission granted - registering for remote notifications")
+                    LogCollector.shared.logPush("System permission granted - registering for remote notifications")
                     UIApplication.shared.registerForRemoteNotifications()
                 } else {
                     print("🚫 [Push] System permission denied - scheduling re-ask in 3 days")

@@ -26,6 +26,7 @@
 		3EF6E3502EBA18710000C6D5 /* EggLoadingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */; };
 		3EF6E3512EBA19000000C6D5 /* EggView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E3522EBA19000000C6D5 /* EggView.swift */; };
 		3EF6E3532EBA19000000C6D5 /* CustomProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E3542EBA19000000C6D5 /* CustomProgressView.swift */; };
+		3EF6E3552EBA20000000C6D5 /* LogCollector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF6E3562EBA20000000C6D5 /* LogCollector.swift */; };
 		D24C86A02EA766880098D34B /* ChickMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24C869F2EA766850098D34B /* ChickMenu.swift */; };
 		D24C86A22EA766D00098D34B /* BlackHanSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D24C86A12EA766D00098D34B /* BlackHanSans-Regular.ttf */; };
 		D24C86A42EA76CD40098D34B /* ChickTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D24C86A32EA76CD00098D34B /* ChickTabBar.swift */; };
@@ -64,6 +65,7 @@
 		3EF6E34D2EBA18710000C6D5 /* EggLoadingViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggLoadingViewController.swift; sourceTree = "<group>"; };
 		3EF6E3522EBA19000000C6D5 /* EggView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EggView.swift; sourceTree = "<group>"; };
 		3EF6E3542EBA19000000C6D5 /* CustomProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomProgressView.swift; sourceTree = "<group>"; };
+		3EF6E3562EBA20000000C6D5 /* LogCollector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogCollector.swift; sourceTree = "<group>"; };
 		D24C869F2EA766850098D34B /* ChickMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickMenu.swift; sourceTree = "<group>"; };
 		D24C86A12EA766D00098D34B /* BlackHanSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "BlackHanSans-Regular.ttf"; sourceTree = "<group>"; };
 		D24C86A32EA76CD00098D34B /* ChickTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChickTabBar.swift; sourceTree = "<group>"; };
@@ -105,6 +107,7 @@
 			children = (
 				3E1301E32EBCCAC4008670DD /* GoogleService-Info.plist */,
 				3E58A50E2EB12ABA00325AF9 /* AppsFlyerHelper.swift */,
+				3EF6E3562EBA20000000C6D5 /* LogCollector.swift */,
 				3E58A50F2EB12ABA00325AF9 /* ConfigClient.swift */,
 				3E58A5102EB12ABA00325AF9 /* LaunchModeManager.swift */,
 				3E58A5112EB12ABA00325AF9 /* PushPermissionService.swift */,
@@ -303,6 +306,7 @@
 				3EF6E3512EBA19000000C6D5 /* EggView.swift in Sources */,
 				3EF6E3532EBA19000000C6D5 /* CustomProgressView.swift in Sources */,
 				3E58A5192EB12ABA00325AF9 /* AppsFlyerHelper.swift in Sources */,
+				3EF6E3552EBA20000000C6D5 /* LogCollector.swift in Sources */,
 				D2961F002EA67EBF00203986 /* ChickOnboarding.swift in Sources */,
 				D2A5F7DA2EA67780005694C9 /* ChickLoading.swift in Sources */,
 				D2F48C6F2EA8ADEA00386B16 /* ChickInfo.swift in Sources */,

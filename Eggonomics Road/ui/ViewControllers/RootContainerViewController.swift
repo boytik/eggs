@@ -10,45 +10,23 @@ final class RootContainerViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        
-        // Сразу показываем загрузочный экран
-        showInitialLoading()
-        
         Task { await startFlow() }
         NotificationCenter.default.addObserver(self, selector: #selector(openURLFromPush(_:)), name: .openURLInsideApp, object: nil)
     }
-    
-    private func showInitialLoading() {
-        let loadingVC = EggLoadingBouncingViewController()
-        loadingVC.disableAutoTransition()  // Отключаем автоматический переход
-        let navController = UINavigationController(rootViewController: loadingVC)
-        transition(to: navController)
-    }
 
     @objc private func openURLFromPush(_ note: Notification) {
-        guard let url = note.object as? URL else { 
-            print("❌ [Push] Invalid URL in notification")
-            return 
-        }
-        
-        print("🔔 [Push] Opening URL from push notification: \(url.absoluteString)")
-        print("🔔 [Push] ⚠️  This URL will NOT be saved - next launch will use config URL")
-        
-        // Всегда открываем веб-вью при получении push-уведомления с URL
+        guard let url = note.object as? URL else { return }
+        if modeManager.currentMode == .webview {
             if let webVC = current as? WebContainerViewController {
-            // Если уже показан веб-вью, просто загружаем новый URL
-            print("🔔 [Push] Loading URL in existing WebView")
                 webVC.load(url: url)
+            } else {
+                let web = WebContainerViewController(initialURL: url)
+                transition(to: web)
+            }
         } else {
-            // Создаем новый веб-вью и переходим к нему
-            print("🔔 [Push] Creating new WebView for push notification")
+            // If in fan mode, decide policy (e.g., present a web VC modally)
             let web = WebContainerViewController(initialURL: url)
-            transition(to: web)
-            
-            // ВАЖНО: НЕ сохраняем URL из push-уведомления!
-            // Режим остается тот же, что был до этого
-            // При следующем запуске будет использоваться URL из конфига
-            print("🔔 [Push] ⚠️  Push URL is temporary - not updating saved mode")
+            present(web, animated: true)
         }
     }
 
@@ -80,128 +58,34 @@ final class RootContainerViewController: UIViewController {
     }
 
     private func showFan() {
-        // Если уже показан загрузочный экран, переходим к основному приложению
-        if let navController = current as? UINavigationController,
-           navController.topViewController is EggLoadingBouncingViewController {
-            // Заменяем ChickLoading на ChickTabBar (основное приложение)
-            let tabBarVC = ChickTabBar()
-            navController.setViewControllers([tabBarVC], animated: true)
-            print("🎮 [UI] Transitioned from loading to main app")
-            
-            // Принудительно обновляем layout после перехода к игре
-            DispatchQueue.main.async {
-                self.forceLayoutUpdate()
-            }
-        } else {
-            // Если по какой-то причине загрузочного экрана нет, создаем новый
-            let vc = EggLoadingBouncingViewController()
+        // Instead of showing generic Fantic, show existing ChickLoading flow
+        let vc = ChickLoading()
         let navController = UINavigationController(rootViewController: vc)
         transition(to: navController)
-            print("🎮 [UI] Created new loading screen for fan mode")
-        }
     }
 
     private func showWeb(url: URL) {
-        print("🌐 [UI] Creating WebContainerViewController for URL: \(url)")
         let web = WebContainerViewController(initialURL: url)
-        print("🌐 [UI] WebContainerViewController created, transitioning...")
         transition(to: web)
-        print("🌐 [UI] Transition completed")
-        
-        // Показываем экран уведомлений только при запуске WebView
-        Task {
-            await maybeAskPushPermission()
-        }
-        print("🌐 [UI] Transitioned from loading to web view: \(url)")
+        maybeAskPushPermission()
     }
 
-    private func maybeAskPushPermission() async {
-        // Проверяем что мы в режиме webview
-        guard LaunchModeManager.shared.currentMode == .webview else { 
-            print("🔔 [Push] Not in webview mode, skipping permission request")
-            return 
-        }
-        
-        // Проверяем можем ли спросить разрешение
-        let canAsk = await PushPermissionService.shared.canAskForPermission()
-        guard canAsk else {
-            print("🔔 [Push] Cannot ask for permission at this time - user may have already granted or denied recently")
-            return
-        }
-        
-        print("🔔 [Push] ✅ All conditions met - showing push permission screen")
-        
+    private func maybeAskPushPermission() {
+        guard LaunchModeManager.shared.currentMode == .webview,
+              PushPermissionService.shared.shouldShowCustomAsk() else { return }
         let ask = PushPermissionViewController(
             onAllow: {
-                print("🔔 [Push] User chose 'Yes, I Want Bonuses!' - requesting system authorization")
-                PushPermissionService.shared.markPermissionAsked()
                 PushPermissionService.shared.requestSystemAuthorization()
             },
             onLater: {
-                print("🔔 [Push] User chose 'Skip' - scheduling re-ask in 3 days")
                 PushPermissionService.shared.scheduleReaskIn3Days()
             }
         )
-        
-        await MainActor.run {
         present(ask, animated: true)
-        }
-    }
-    
-    private func forceLayoutUpdate() {
-        print("🔄 [UI] Forcing layout update for orientation change")
-        
-        // Обновляем layout основного view
-        view.setNeedsLayout()
-        view.layoutIfNeeded()
-        
-        // Обновляем layout текущего контроллера
-        if let currentVC = current {
-            currentVC.view.setNeedsLayout()
-            currentVC.view.layoutIfNeeded()
-            
-            // Если это navigation controller, обновляем его содержимое
-            if let navController = currentVC as? UINavigationController {
-                for vc in navController.viewControllers {
-                    vc.view.setNeedsLayout()
-                    vc.view.layoutIfNeeded()
-                }
-            }
-        }
-        
-        // Принудительно обновляем ориентацию
-        if #available(iOS 16.0, *) {
-            view.window?.windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: .portrait))
-        }
     }
 
     // MARK: Flow
     func startFlow(forceFirstLaunch: Bool = false) async {
-        print("🚀 [UI] Starting flow, forceFirstLaunch: \(forceFirstLaunch)")
-        
-        // Диагностика для OneLink проблемы
-        let conversionData = AppsFlyerHelper.shared.rawConversionDict()
-        let deepLinkData = AppsFlyerHelper.shared.rawDeepLinkDict()
-        
-        print("🔍 [UI] Conversion data available: \(conversionData != nil)")
-        print("🔍 [UI] Deep link data available: \(deepLinkData != nil)")
-        
-        if let conversion = conversionData {
-            let afStatus = conversion["af_status"] as? String ?? "nil"
-            print("🔍 [UI] Current af_status from conversion: '\(afStatus)'")
-        }
-        
-        if let deepLink = deepLinkData {
-            let pid = deepLink["pid"] as? String ?? "nil"
-            let campaign = deepLink["c"] as? String ?? "nil"
-            print("🔍 [UI] Deep link pid: '\(pid)', campaign: '\(campaign)'")
-        }
-        
-        // При принудительном первом запуске сбрасываем флаг запретов
-        if forceFirstLaunch {
-            modeManager.resetConfigRequestsFlag()
-        }
-        
         // Проверяем флаг "больше не делать запросы к конфигу"
         if modeManager.shouldSkipConfigRequests {
             print("🚫 Skipping config requests permanently - showing fan mode")
@@ -242,40 +126,21 @@ final class RootContainerViewController: UIViewController {
             let merged = await AppsFlyerHelper.shared.buildMergedPayload()
             // Enforce rule: only allow webview when Non-organic
             let afStatus = (merged["af_status"] as? String)?.lowercased()
-            print("🔍 [DEBUG] Original af_status from merged: '\(afStatus ?? "nil")'")
-            print("🔍 [DEBUG] Full merged payload: \(merged)")
-            
-            // ПРИНУДИТЕЛЬНАЯ РЕГИСТРАЦИЯ: всегда отправляем данные для регистрации AppsFlyer ID + FCM токена
-            let originalCanAskConfig = (afStatus == "non-organic")
-            let canAskConfig = true  // Принудительно для регистрации
-            print("🔍 [DEBUG] Original canAskConfig: \(originalCanAskConfig)")
-            print("🔍 [DEBUG] FORCED canAskConfig: \(canAskConfig) (для регистрации на сервере)")
-            print("🔍 [DEBUG] Logic: af_status '\(afStatus ?? "nil")' == 'non-organic' = \(originalCanAskConfig)")
-            print("🔍 [DEBUG] ⚠️  FORCING CONFIG REQUEST TO REGISTER APPSFLYER ID + FCM TOKEN")
-            
+            let canAskConfig = (afStatus == "non-organic")
             
             if canAskConfig {
-                print("🔍 [DEBUG] AF Status: \(afStatus ?? "nil"), sending config request...")
-                print("🔍 [DEBUG] Merged payload keys: \(merged.keys.sorted())")
                 let resp = try await ConfigClient.shared.fetchConfig(withMergedPayload: merged)
-                print("🔍 [DEBUG] Server response: ok=\(resp.ok), url=\(resp.url ?? "nil"), message=\(resp.message ?? "nil")")
                 if resp.ok, let u = resp.url, let url = URL(string: u) {
                     modeManager.cache(url: u, expires: resp.expires)
                     modeManager.currentMode = .webview
-                    
-                    
                     showWeb(url: url)
                 } else {
                     modeManager.currentMode = .fan
-                    
-                    
                     showFan()
                 }
             } else {
                 print("ℹ️ AF status not Non-organic → fan mode")
                 modeManager.currentMode = .fan
-                
-                
                 showFan()
             }
         } catch {

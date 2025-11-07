@@ -19,6 +19,8 @@ final class ConfigClient {
         print("🌐 [Config] Method: POST")
         print("🌐 [Config] Content-Type: application/json")
         
+        LogCollector.shared.logConfig("Sending config request to \(endpoint)")
+        
         // Логируем ключевые параметры для регистрации
         print("🌐 [Config] Key registration parameters:")
         print("🌐 [Config]   af_id: '\(payload["af_id"] ?? "nil")'")
