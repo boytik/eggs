@@ -253,6 +253,11 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         let firebaseProjectID = "279290682673"
         print("🔍 [AF] bundleID: '\(bundleID)', storeID: '\(storeID)', locale: '\(locale)'")
         print("🔍 [AF] pushToken: '\(pushToken ?? "nil")', firebaseProjectID: '\(firebaseProjectID)'")
+        if let token = pushToken, !token.isEmpty {
+            LogCollector.shared.logPush("Using FCM token in payload")
+        } else {
+            LogCollector.shared.logError("FCM token missing when building AppsFlyer payload")
+        }
 
         merged["af_id"] = finalAfId
         merged["bundle_id"] = bundleID

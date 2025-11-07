@@ -105,10 +105,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         print("✅ [Push] Device registered for remote notifications")
         print("📱 [Push] Device token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
         Messaging.messaging().apnsToken = deviceToken
+        LogCollector.shared.logPush("APNs token assigned to Firebase Messaging")
+        PushPermissionService.shared.updateAPNSToken(deviceToken)
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("❌ [Push] Failed to register for remote notifications: \(error.localizedDescription)")
+        LogCollector.shared.logError("Failed to register for remote notifications: \(error.localizedDescription)")
     }
     
     // Обработка push-уведомлений когда приложение в фоне
