@@ -18,7 +18,16 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     private var isNavigationVisible = false
     
     // Log copy button
-    private var logCopyButton: UIButton!
+    // private var logCopyButton: UIButton! // Убрано по требованию пользователя
+    
+    // Loading screen
+    private var loadingView: UIView!
+    private var loadingImageView: UIImageView!
+    private var loadingLabel: UILabel!
+    private var loadingProgressView: UIProgressView!
+    private var loadingTimer: Timer?
+    private var isInitialLoad = true
+    private var lastDeepLinkTime: Date?
 
     init(initialURL: URL) {
         self.initialURL = initialURL
@@ -129,11 +138,77 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         setupGestures()
         
         // Настройка кнопки копирования логов
-        setupLogCopyButton()
+        // setupLogCopyButton() // Убрано по требованию пользователя
+        
+        // Настройка экрана загрузки
+        setupLoadingScreen()
     }
     
     deinit {
         NotificationCenter.default.removeObserver(self)
+        loadingTimer?.invalidate()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        print("🌍 [WebView] viewWillAppear - checking if returned from external app")
+        LogCollector.shared.logWebView("WebView will appear - checking return from external app")
+        
+        // Добавляем наблюдатель за возвратом в приложение
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidBecomeActive),
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        print("🌍 [WebView] viewWillDisappear")
+        
+        // Убираем наблюдатель
+        NotificationCenter.default.removeObserver(
+            self,
+            name: UIApplication.didBecomeActiveNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func applicationDidBecomeActive() {
+        print("🔗 [WebView] App became active - user returned from external app")
+        LogCollector.shared.logWebView("App became active - user returned from external app")
+        
+        // Проверяем, был ли недавно открыт диплинк
+        if let lastDeepLink = lastDeepLinkTime,
+           Date().timeIntervalSince(lastDeepLink) < 10.0 { // В течение 10 секунд
+            print("🔗 [WebView] User returned after deep link - ensuring WebView is in good state")
+            LogCollector.shared.logWebView("User returned after deep link within 10 seconds")
+            
+            // Небольшая задержка для стабилизации
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // Проверяем состояние WebView
+                if let currentURL = self.webView.url {
+                    print("🔗 [WebView] Current WebView URL: \(currentURL.absoluteString)")
+                    
+                    // Если WebView показывает ошибку или пустую страницу, можно попробовать вернуться назад
+                    if currentURL.absoluteString.contains("about:blank") || 
+                       currentURL.absoluteString.contains("error") {
+                        print("🔗 [WebView] WebView shows error/blank - attempting to go back")
+                        if self.webView.canGoBack {
+                            self.webView.goBack()
+                        }
+                    }
+                } else {
+                    print("🔗 [WebView] WebView has no URL - this might be an issue")
+                }
+                
+                // Сбрасываем время последнего диплинка
+                self.lastDeepLinkTime = nil
+            }
+        } else {
+            print("🔗 [WebView] Regular app activation (not after deep link)")
+        }
     }
     
     // MARK: - Keyboard Handling
@@ -274,8 +349,8 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         print("🧭 [Navigation] Gestures configured")
     }
     
-    // MARK: - Log Copy Button Setup
-    
+    // MARK: - Log Copy Button Setup (DISABLED)
+    /*
     private func setupLogCopyButton() {
         logCopyButton = UIButton(type: .system)
         logCopyButton.setTitle("📋", for: .normal)
@@ -301,6 +376,7 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         
         print("📋 [LogCollector] Log copy button created")
     }
+    */
     
     // MARK: - Navigation Actions
     
@@ -377,8 +453,8 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
         }
     }
     
-    // MARK: - Log Copy Actions
-    
+    // MARK: - Log Copy Actions (DISABLED)
+    /*
     @objc private func copyLogsToClipboard() {
         print("📋 [LogCollector] Copy logs button pressed")
         
@@ -448,7 +524,9 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
             self.logCopyButton.transform = CGAffineTransform.identity
         }
     }
+    */
     
+    /*
     private func showCopyConfirmation(period: String) {
         // Показываем временное уведомление
         let confirmationLabel = UILabel()
@@ -478,6 +556,137 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
                 confirmationLabel.alpha = 0
             }) { _ in
                 confirmationLabel.removeFromSuperview()
+            }
+        }
+    }
+    */
+    
+    // MARK: - Loading Screen Setup
+    
+    private func setupLoadingScreen() {
+        // Создаем контейнер для экрана загрузки
+        loadingView = UIView()
+        loadingView.backgroundColor = .black
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(loadingView)
+        
+        // Настраиваем изображение загрузки (используем то же что и в ChickLoading)
+        loadingImageView = UIImageView(image: UIImage(named: "chickLaunch"))
+        loadingImageView.contentMode = .scaleAspectFill
+        loadingImageView.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.addSubview(loadingImageView)
+        
+        // Настраиваем label загрузки
+        loadingLabel = UILabel()
+        loadingLabel.text = "LOADING..."
+        loadingLabel.textColor = .white
+        loadingLabel.textAlignment = .center
+        loadingLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Загружаем кастомный шрифт
+        if let customFont = UIFont(name: "Digitalt", size: 22) {
+            loadingLabel.font = customFont
+        } else {
+            loadingLabel.font = UIFont.systemFont(ofSize: 22, weight: .bold)
+        }
+        loadingView.addSubview(loadingLabel)
+        
+        // Настраиваем progress view
+        loadingProgressView = UIProgressView(progressViewStyle: .default)
+        loadingProgressView.progressTintColor = UIColor(named: "chickYellow")
+        loadingProgressView.trackTintColor = .white.withAlphaComponent(0.30)
+        loadingProgressView.layer.cornerRadius = 4
+        loadingProgressView.clipsToBounds = true
+        loadingProgressView.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.addSubview(loadingProgressView)
+        
+        // Настраиваем constraints
+        NSLayoutConstraint.activate([
+            // Loading view занимает весь экран
+            loadingView.topAnchor.constraint(equalTo: view.topAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            loadingView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            
+            // Изображение занимает весь экран
+            loadingImageView.topAnchor.constraint(equalTo: loadingView.topAnchor),
+            loadingImageView.bottomAnchor.constraint(equalTo: loadingView.bottomAnchor),
+            loadingImageView.leadingAnchor.constraint(equalTo: loadingView.leadingAnchor),
+            loadingImageView.trailingAnchor.constraint(equalTo: loadingView.trailingAnchor),
+            
+            // Label по центру X, выше progress bar
+            loadingLabel.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            loadingLabel.bottomAnchor.constraint(equalTo: loadingProgressView.topAnchor, constant: -12),
+            
+            // Progress view внизу экрана
+            loadingProgressView.centerXAnchor.constraint(equalTo: loadingView.centerXAnchor),
+            loadingProgressView.bottomAnchor.constraint(equalTo: loadingView.safeAreaLayoutGuide.bottomAnchor, constant: -5),
+            loadingProgressView.widthAnchor.constraint(equalToConstant: 231),
+            loadingProgressView.heightAnchor.constraint(equalToConstant: 12)
+        ])
+        
+        print("🎬 [WebView] Loading screen setup completed")
+        LogCollector.shared.logWebView("Loading screen setup completed")
+    }
+    
+    private func showLoadingScreen() {
+        guard let loadingView = loadingView else { return }
+        
+        print("🎬 [WebView] Showing loading screen")
+        LogCollector.shared.logWebView("Showing loading screen")
+        
+        loadingView.isHidden = false
+        loadingView.alpha = 1.0
+        loadingProgressView.progress = 0.0
+        
+        // Запускаем анимацию прогресса
+        startLoadingProgress()
+    }
+    
+    private func hideLoadingScreen() {
+        guard let loadingView = loadingView else { return }
+        
+        print("🎬 [WebView] Hiding loading screen")
+        LogCollector.shared.logWebView("Hiding loading screen")
+        
+        loadingTimer?.invalidate()
+        loadingTimer = nil
+        
+        UIView.animate(withDuration: 0.3, animations: {
+            loadingView.alpha = 0.0
+        }) { _ in
+            loadingView.isHidden = true
+        }
+    }
+    
+    private func startLoadingProgress() {
+        loadingTimer?.invalidate()
+        
+        var progress: Float = 0.0
+        loadingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] timer in
+            progress += 0.02 // Медленнее чем в ChickLoading
+            
+            DispatchQueue.main.async {
+                self?.loadingProgressView.setProgress(progress, animated: true)
+            }
+            
+            // Останавливаем на 90% и ждем завершения загрузки страницы
+            if progress >= 0.9 {
+                timer.invalidate()
+            }
+        }
+    }
+    
+    private func completeLoadingProgress() {
+        loadingTimer?.invalidate()
+        
+        // Быстро доводим до 100%
+        UIView.animate(withDuration: 0.2, animations: {
+            self.loadingProgressView.setProgress(1.0, animated: true)
+        }) { _ in
+            // Небольшая задержка перед скрытием
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.hideLoadingScreen()
             }
         }
     }
@@ -531,6 +740,12 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     func load(url: URL) {
         print("🌍 [WebView] Loading URL: \(url.absoluteString)")
         LogCollector.shared.logWebView("Loading URL: \(url.absoluteString)")
+        
+        // Показываем экран загрузки только для первоначальной загрузки
+        if isInitialLoad {
+            showLoadingScreen()
+            isInitialLoad = false
+        }
         
         let request = URLRequest(url: url)
         webView.load(request)
@@ -594,55 +809,126 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
     
     private func isDeepLink(url: URL) -> Bool {
         let scheme = url.scheme?.lowercased() ?? ""
+        let host = url.host?.lowercased() ?? ""
+        let urlString = url.absoluteString.lowercased()
         
-        // Проверяем на диплинки (не http/https)
-        if scheme != "http" && scheme != "https" {
+        print("🔍 [WebView] Checking if URL is deep link:")
+        print("🔍 [WebView]   Scheme: '\(scheme)'")
+        print("🔍 [WebView]   Host: '\(host)'")
+        print("🔍 [WebView]   Full URL: '\(urlString)'")
+        
+        // 1. Проверяем на диплинки (не http/https)
+        let webSchemes = ["http", "https"]
+        if !webSchemes.contains(scheme) {
+            print("🔍 [WebView] ✅ Deep link detected: non-web scheme '\(scheme)'")
             return true
         }
         
-        // Проверяем на специальные домены
-        let host = url.host?.lowercased() ?? ""
-        let deepLinkHosts = ["itunes.apple.com", "apps.apple.com", "play.google.com", "market.android.com"]
+        // 2. Проверяем на специальные домены (App Store, Google Play, etc.)
+        let deepLinkHosts = [
+            "itunes.apple.com",
+            "apps.apple.com", 
+            "play.google.com",
+            "market.android.com",
+            "appstore.com",
+            "app-store.com"
+        ]
         
-        return deepLinkHosts.contains(host)
+        if deepLinkHosts.contains(host) {
+            print("🔍 [WebView] ✅ Deep link detected: special host '\(host)'")
+            return true
+        }
+        
+        // 3. Проверяем на специальные URL паттерны
+        let deepLinkPatterns = [
+            "itms://",
+            "itms-apps://",
+            "market://",
+            "intent://",
+            "whatsapp://",
+            "telegram://",
+            "viber://",
+            "skype://",
+            "mailto:",
+            "tel:",
+            "sms:"
+        ]
+        
+        for pattern in deepLinkPatterns {
+            if urlString.hasPrefix(pattern) {
+                print("🔍 [WebView] ✅ Deep link detected: matches pattern '\(pattern)'")
+                return true
+            }
+        }
+        
+        print("🔍 [WebView] ❌ Not a deep link: regular web URL")
+        return false
     }
     
     private func handleDeepLink(url: URL) {
         print("🔗 [WebView] Handling deep link: \(url.absoluteString)")
+        LogCollector.shared.logWebView("Handling deep link: \(url.absoluteString)")
+        
+        // Записываем время открытия диплинка
+        lastDeepLinkTime = Date()
         
         // Открываем диплинк в системе
         if UIApplication.shared.canOpenURL(url) {
             UIApplication.shared.open(url) { success in
                 print("🔗 [WebView] Deep link opened: \(success)")
+                LogCollector.shared.logWebView("Deep link opened successfully: \(success)")
                 
-                // Возвращаемся на предыдущую страницу после открытия диплинка
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    if self.webView.canGoBack {
-                        print("🔗 [WebView] Going back after deep link")
-                        self.webView.goBack()
-        }
-    }
+                if success {
+                    // Если диплинк открылся успешно, возвращаемся на предыдущую страницу
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        if self.webView.canGoBack {
+                            print("🔗 [WebView] Going back after successful deep link")
+                            LogCollector.shared.logWebView("Going back after successful deep link")
+                            self.webView.goBack()
+                        } else {
+                            print("🔗 [WebView] Cannot go back - no history available")
+                            LogCollector.shared.logWebView("Cannot go back after deep link - no history")
+                        }
+                    }
+                } else {
+                    print("❌ [WebView] Deep link failed to open")
+                    LogCollector.shared.logError("Deep link failed to open: \(url.absoluteString)")
+                }
             }
         } else {
             print("❌ [WebView] Cannot open deep link: \(url.absoluteString)")
+            LogCollector.shared.logError("Cannot open deep link (not supported): \(url.absoluteString)")
         }
     }
     
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         print("🌍 [WebView] Started loading: \(webView.url?.absoluteString ?? "unknown")")
+        LogCollector.shared.logWebView("Started loading: \(webView.url?.absoluteString ?? "unknown")")
     }
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         print("🌍 [WebView] Finished loading: \(webView.url?.absoluteString ?? "unknown")")
+        LogCollector.shared.logWebView("Finished loading: \(webView.url?.absoluteString ?? "unknown")")
+        
+        // Завершаем загрузку и скрываем экран загрузки
+        completeLoadingProgress()
         updateNavigationButtons()
     }
     
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         print("❌ [WebView] Navigation failed: \(error.localizedDescription)")
+        LogCollector.shared.logError("WebView navigation failed: \(error.localizedDescription)")
+        
+        // Скрываем экран загрузки при ошибке
+        hideLoadingScreen()
     }
     
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         print("❌ [WebView] Provisional navigation failed: \(error.localizedDescription)")
+        LogCollector.shared.logError("WebView provisional navigation failed: \(error.localizedDescription)")
+        
+        // Скрываем экран загрузки при ошибке
+        hideLoadingScreen()
         
         let nsError = error as NSError
         print("❌ [WebView] Error domain: \(nsError.domain)")
