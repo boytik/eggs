@@ -353,10 +353,56 @@ final class AppsFlyerHelper: NSObject, AppsFlyerLibDelegate, DeepLinkDelegate {
         print("🔍 [AF] Final af_status: '\(finalAfStatus)'")
         print("🔍 [AF] Final merged payload keys: \(Array(merged.keys).map { "\($0)" }.sorted())")
         
+        // === МАКСИМАЛЬНО ПОДРОБНОЕ ЛОГИРОВАНИЕ PAYLOAD ===
+        print("🔍 [AF] === COMPLETE PAYLOAD DUMP START ===")
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: merged, options: [.prettyPrinted])
+            if let jsonString = String(data: jsonData, encoding: .utf8) {
+                print(jsonString)
+                LogCollector.shared.logAppsFlyer("COMPLETE PAYLOAD: \(jsonString)")
+            }
+        } catch {
+            print("❌ [AF] Failed to serialize payload for logging: \(error)")
+            LogCollector.shared.logError("Failed to serialize AppsFlyer payload: \(error)")
+        }
+        print("🔍 [AF] === COMPLETE PAYLOAD DUMP END ===")
+        
+        // Финальная проверка критических полей
+        print("🔍 [AF] === FINAL CRITICAL FIELDS CHECK ===")
+        let criticalFields = ["af_id", "push_token", "firebase_project_id", "bundle_id", "af_status", "store_id"]
+        var missingFields: [String] = []
+        var emptyFields: [String] = []
+        
+        for field in criticalFields {
+            if let value = merged[field] {
+                let stringValue = "\(value)"
+                if stringValue.isEmpty || stringValue == "nil" {
+                    emptyFields.append(field)
+                    print("🔍 [AF] ⚠️ \(field): EMPTY VALUE '\(stringValue)'")
+                } else {
+                    print("🔍 [AF] ✅ \(field): '\(stringValue)' (\(stringValue.count) chars)")
+                }
+            } else {
+                missingFields.append(field)
+                print("🔍 [AF] ❌ \(field): MISSING")
+            }
+        }
+        
+        if !missingFields.isEmpty {
+            LogCollector.shared.logError("Missing critical fields: \(missingFields.joined(separator: ", "))")
+        }
+        if !emptyFields.isEmpty {
+            LogCollector.shared.logError("Empty critical fields: \(emptyFields.joined(separator: ", "))")
+        }
+        
+        print("🔍 [AF] === END FINAL CHECK ===")
+        
         if finalAfStatus.lowercased() == "non-organic" {
             print("🔍 [AF] Non-organic install - full payload will be sent to server")
+            LogCollector.shared.logAppsFlyer("Non-organic install detected - sending payload to server")
         } else {
             print("🔍 [AF] Organic install - fan mode will be used")
+            LogCollector.shared.logAppsFlyer("Organic install detected - using fan mode")
         }
 
         return merged

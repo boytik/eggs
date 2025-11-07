@@ -123,23 +123,47 @@ final class RootContainerViewController: UIViewController {
         }
 
         do {
+            print("🚀 [Root] === FIRST LAUNCH FLOW START ===")
+            LogCollector.shared.log("Starting first launch flow", category: "Root")
+            
             let merged = await AppsFlyerHelper.shared.buildMergedPayload()
+            
             // Enforce rule: only allow webview when Non-organic
             let afStatus = (merged["af_status"] as? String)?.lowercased()
             let canAskConfig = (afStatus == "non-organic")
             
+            print("🚀 [Root] === DECISION POINT ===")
+            print("🚀 [Root] af_status: '\(afStatus ?? "nil")'")
+            print("🚀 [Root] canAskConfig: \(canAskConfig)")
+            LogCollector.shared.log("Decision: af_status='\(afStatus ?? "nil")', canAskConfig=\(canAskConfig)", category: "Root")
+            
             if canAskConfig {
+                print("🚀 [Root] ✅ Non-organic install - requesting config from server")
+                LogCollector.shared.log("Non-organic install detected - requesting config", category: "Root")
+                
                 let resp = try await ConfigClient.shared.fetchConfig(withMergedPayload: merged)
+                
+                print("🚀 [Root] === CONFIG RESPONSE ANALYSIS ===")
+                print("🚀 [Root] Response ok: \(resp.ok)")
+                print("🚀 [Root] Response url: \(resp.url ?? "nil")")
+                print("🚀 [Root] Response message: \(resp.message ?? "nil")")
+                LogCollector.shared.log("Config response: ok=\(resp.ok), url=\(resp.url ?? "nil"), message=\(resp.message ?? "nil")", category: "Root")
+                
                 if resp.ok, let u = resp.url, let url = URL(string: u) {
+                    print("🚀 [Root] ✅ Config successful - switching to WebView mode")
+                    LogCollector.shared.log("Config successful - switching to WebView mode", category: "Root")
                     modeManager.cache(url: u, expires: resp.expires)
                     modeManager.currentMode = .webview
                     showWeb(url: url)
                 } else {
+                    print("🚀 [Root] ❌ Config failed - switching to fan mode")
+                    LogCollector.shared.logError("Config failed - switching to fan mode")
                     modeManager.currentMode = .fan
                     showFan()
                 }
             } else {
-                print("ℹ️ AF status not Non-organic → fan mode")
+                print("🚀 [Root] ℹ️ Organic install - switching to fan mode")
+                LogCollector.shared.log("Organic install detected - switching to fan mode", category: "Root")
                 modeManager.currentMode = .fan
                 showFan()
             }

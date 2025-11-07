@@ -167,11 +167,17 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
     
     // Получение текущего FCM токена (с ожиданием до timeout секунд)
     func getCurrentFCMToken(timeout: TimeInterval = 10.0) async -> String? {
+        print("📮 [Push] === FCM TOKEN REQUEST START ===")
+        LogCollector.shared.logPush("FCM token request started (timeout: \(timeout)s)")
+        
         if let cached = currentFCMTokenSnapshot(), !cached.isEmpty {
-            LogCollector.shared.logPush("Using cached FCM token")
+            print("📮 [Push] ✅ Using cached FCM token: \(cached.prefix(20))...")
+            LogCollector.shared.logPush("Using cached FCM token (length: \(cached.count))")
             return cached
         }
-        LogCollector.shared.logPush("Waiting for FCM token (timeout: \(timeout)s)")
+        
+        print("📮 [Push] ⏳ No cached token - waiting for FCM token (timeout: \(timeout)s)")
+        LogCollector.shared.logPush("No cached token - waiting for FCM token")
         refreshFCMToken(reason: "Explicit request from payload builder")
 
         let interval: TimeInterval = 0.5
@@ -179,22 +185,32 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
 
         for attempt in 0..<iterations {
             if let token = currentFCMTokenSnapshot(), !token.isEmpty {
-                LogCollector.shared.logPush("FCM token obtained after \(Double(attempt) * interval)s wait")
+                print("📮 [Push] ✅ FCM token obtained after \(Double(attempt) * interval)s wait")
+                print("📮 [Push] Token: \(token.prefix(20))... (length: \(token.count))")
+                LogCollector.shared.logPush("FCM token obtained after \(Double(attempt) * interval)s wait (length: \(token.count))")
                 return token
             }
+            
+            print("📮 [Push] ⏳ Attempt \(attempt + 1)/\(iterations) - no token yet, sleeping \(interval)s")
             try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
 
             // Повторно запрашиваем токен каждые 2 секунды, если его все еще нет
             if (attempt + 1) % 4 == 0 {
+                print("📮 [Push] 🔄 Retry \(attempt + 1) - refreshing FCM token")
                 refreshFCMToken(reason: "Retry while waiting (attempt \(attempt + 1))")
             }
         }
 
+        // Финальная проверка на границе таймаута
         if let token = currentFCMTokenSnapshot(), !token.isEmpty {
-            LogCollector.shared.logPush("FCM token obtained at timeout boundary")
+            print("📮 [Push] ✅ FCM token obtained at timeout boundary")
+            print("📮 [Push] Token: \(token.prefix(20))... (length: \(token.count))")
+            LogCollector.shared.logPush("FCM token obtained at timeout boundary (length: \(token.count))")
             return token
         }
 
+        print("📮 [Push] ❌ FCM token wait timed out after \(timeout)s")
+        print("📮 [Push] === FCM TOKEN REQUEST FAILED ===")
         LogCollector.shared.logError("FCM token wait timed out after \(timeout)s")
         return nil
     }
