@@ -49,6 +49,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         
         // Configure push service
         PushPermissionService.shared.configure()
+        
+        // Print diagnostic info after a short delay to let everything initialize
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            Task {
+                await PushPermissionService.shared.printCurrentTokens()
+            }
+        }
 
         return true
     }

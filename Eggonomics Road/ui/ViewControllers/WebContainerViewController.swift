@@ -411,6 +411,21 @@ final class WebContainerViewController: UIViewController, WKNavigationDelegate, 
             self.showCopyConfirmation(period: "статистика")
         })
         
+        alert.addAction(UIAlertAction(title: "🔔 Push Диагностика", style: .default) { _ in
+            Task {
+                let pushDiagnostics = await LogCollector.shared.getPushDiagnostics()
+                await MainActor.run {
+                    UIPasteboard.general.string = pushDiagnostics
+                    self.showCopyConfirmation(period: "Push диагностика")
+                }
+            }
+        })
+        
+        alert.addAction(UIAlertAction(title: "🧪 Тест Push", style: .default) { _ in
+            PushPermissionService.shared.sendTestNotification()
+            self.showCopyConfirmation(period: "тестовое уведомление отправлено")
+        })
+        
         alert.addAction(UIAlertAction(title: "Отмена", style: .cancel))
         
         // For iPad

@@ -13,8 +13,15 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
     private var currentFCMTokenInternal: String?
 
     func configure() {
+        print("🔧 [Push] Configuring PushPermissionService...")
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
+        
+        // Запускаем диагностику при инициализации
+        Task {
+            await checkCurrentPermissionStatus()
+        }
+        print("✅ [Push] PushPermissionService configured successfully")
     }
 
     func shouldShowCustomAsk() -> Bool {
@@ -107,16 +114,31 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
     func userNotificationCenter(_ center: UNUserNotificationCenter, 
                               willPresent notification: UNNotification, 
                               withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        print("🔔 [Push] Received notification while app is active")
+        print("🔔 [Push] === NOTIFICATION RECEIVED WHILE APP ACTIVE ===")
+        print("🔔 [Push] Title: \(notification.request.content.title)")
+        print("🔔 [Push] Body: \(notification.request.content.body)")
+        print("🔔 [Push] UserInfo: \(notification.request.content.userInfo)")
+        print("🔔 [Push] Badge: \(notification.request.content.badge ?? 0)")
+        print("🔔 [Push] Sound: \(notification.request.content.sound?.debugDescription ?? "default")")
+        
+        LogCollector.shared.logPush("Notification received while app active - Title: \(notification.request.content.title)")
+        
         // Показываем уведомления даже когда приложение активно
         completionHandler([.alert, .badge, .sound])
+        print("🔔 [Push] Notification will be presented with [alert, badge, sound]")
     }
     
     // Обработка нажатия на уведомление
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        print("🔔 [Push] User tapped notification")
+        print("🔔 [Push] === USER TAPPED NOTIFICATION ===")
+        print("🔔 [Push] Action identifier: \(response.actionIdentifier)")
+        print("🔔 [Push] Notification title: \(response.notification.request.content.title)")
+        print("🔔 [Push] Notification body: \(response.notification.request.content.body)")
+        
         let userInfo = response.notification.request.content.userInfo
         print("🔔 [Push] Full notification payload: \(userInfo)")
+        
+        LogCollector.shared.logPush("User tapped notification - Action: \(response.actionIdentifier), Title: \(response.notification.request.content.title)")
         
         // Ищем URL в data секции payload
         var urlString: String?
@@ -146,12 +168,18 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
 
     // MARK: MessagingDelegate
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("📮 [Push] FCM token from delegate: \(fcmToken ?? "nil")")
+        print("📮 [Push] === FCM TOKEN DELEGATE CALLBACK ===")
+        print("📮 [Push] FCM token from delegate: \(fcmToken?.prefix(20) ?? "nil")...")
+        print("📮 [Push] Token length: \(fcmToken?.count ?? 0)")
+        
         guard let token = fcmToken, !token.isEmpty else {
+            print("❌ [Push] FCM token delegate callback provided empty token")
             LogCollector.shared.logError("FCM token delegate callback provided empty token")
             return
         }
-        LogCollector.shared.logPush("FCM token received via delegate")
+        
+        print("✅ [Push] Valid FCM token received via delegate")
+        LogCollector.shared.logPush("FCM token received via delegate (length: \(token.count))")
         storeFCMToken(token, source: "delegate")
     }
     
@@ -213,6 +241,108 @@ final class PushPermissionService: NSObject, UNUserNotificationCenterDelegate, M
         print("📮 [Push] === FCM TOKEN REQUEST FAILED ===")
         LogCollector.shared.logError("FCM token wait timed out after \(timeout)s")
         return nil
+    }
+
+    // MARK: - Testing Methods
+    func sendTestNotification() {
+        print("🧪 [Push] Sending test local notification...")
+        let content = UNMutableNotificationContent()
+        content.title = "Test Push Notification"
+        content.body = "This is a test notification to verify push notifications are working"
+        content.sound = .default
+        content.badge = 1
+        
+        let request = UNNotificationRequest(identifier: "test-notification-\(Date().timeIntervalSince1970)", 
+                                          content: content, 
+                                          trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("❌ [Push] Failed to schedule test notification: \(error)")
+                LogCollector.shared.logError("Failed to schedule test notification: \(error)")
+            } else {
+                print("✅ [Push] Test notification scheduled successfully")
+                LogCollector.shared.logPush("Test notification scheduled successfully")
+            }
+        }
+    }
+    
+    func printCurrentTokens() async {
+        print("🔍 [Push] === CURRENT TOKENS ===")
+        
+        // FCM Token
+        if let fcmToken = await getCurrentFCMToken(timeout: 5.0) {
+            print("📮 [Push] FCM Token: \(fcmToken.prefix(20))...(\(fcmToken.count) chars)")
+        } else {
+            print("❌ [Push] FCM Token: Not available")
+        }
+        
+        // APNs Token
+        let apnsToken = syncQueue.sync { apnsTokenData }
+        if let apnsToken = apnsToken {
+            let tokenString = apnsToken.map { String(format: "%02.2hhx", $0) }.joined()
+            print("📱 [Push] APNs Token: \(tokenString)")
+        } else {
+            print("❌ [Push] APNs Token: Not available")
+        }
+        
+        print("🔍 [Push] === END TOKENS ===")
+    }
+    
+    func forceRefreshTokens() {
+        print("🔄 [Push] Force refreshing all tokens...")
+        LogCollector.shared.logPush("Force refreshing all tokens")
+        
+        // Принудительно обновляем FCM токен
+        refreshFCMToken(reason: "Force refresh requested")
+        
+        // Перерегистрируемся для push уведомлений
+        UIApplication.shared.registerForRemoteNotifications()
+        
+        print("✅ [Push] Token refresh initiated")
+    }
+    
+    func getAPNSTokenForDiagnostics() -> String? {
+        return syncQueue.sync {
+            guard let tokenData = apnsTokenData else { return nil }
+            return tokenData.map { String(format: "%02.2hhx", $0) }.joined()
+        }
+    }
+
+    // MARK: - Diagnostic Methods
+    func checkCurrentPermissionStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        print("🔔 [Push] === PERMISSION DIAGNOSTICS ===")
+        print("🔔 [Push] Authorization status: \(settings.authorizationStatus.rawValue) (\(authorizationStatusDescription(settings.authorizationStatus)))")
+        print("🔔 [Push] Alert setting: \(settings.alertSetting.rawValue) (\(notificationSettingDescription(settings.alertSetting)))")
+        print("🔔 [Push] Badge setting: \(settings.badgeSetting.rawValue) (\(notificationSettingDescription(settings.badgeSetting)))")
+        print("🔔 [Push] Sound setting: \(settings.soundSetting.rawValue) (\(notificationSettingDescription(settings.soundSetting)))")
+        print("🔔 [Push] Notification center setting: \(settings.notificationCenterSetting.rawValue) (\(notificationSettingDescription(settings.notificationCenterSetting)))")
+        print("🔔 [Push] Lock screen setting: \(settings.lockScreenSetting.rawValue) (\(notificationSettingDescription(settings.lockScreenSetting)))")
+        print("🔔 [Push] Critical alert setting: \(settings.criticalAlertSetting.rawValue) (\(notificationSettingDescription(settings.criticalAlertSetting)))")
+        print("🔔 [Push] === END DIAGNOSTICS ===")
+        
+        LogCollector.shared.logPush("Permission diagnostics - Auth: \(authorizationStatusDescription(settings.authorizationStatus)), Alert: \(notificationSettingDescription(settings.alertSetting))")
+    }
+    
+    private func authorizationStatusDescription(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .notDetermined: return "Not Determined"
+        case .denied: return "Denied"
+        case .authorized: return "Authorized"
+        case .provisional: return "Provisional"
+        case .ephemeral: return "Ephemeral"
+        @unknown default: return "Unknown"
+        }
+    }
+    
+    private func notificationSettingDescription(_ setting: UNNotificationSetting) -> String {
+        switch setting {
+        case .notSupported: return "Not Supported"
+        case .disabled: return "Disabled"
+        case .enabled: return "Enabled"
+        @unknown default: return "Unknown"
+        }
     }
 
     // MARK: - Private helpers
